@@ -7,8 +7,8 @@
     <ProjectGuid>{DEB256DA-3C2D-4869-B210-53AAD4506F55}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>RavenDamage</RootNamespace>
-    <AssemblyName>RavenDamage</AssemblyName>
+    <RootNamespace>BigDamage</RootNamespace>
+    <AssemblyName>BigDamage</AssemblyName>
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -59,12 +59,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CharacterDamageMePatch.cs" />
-    <Compile Include="DmgPopLoadInfoPatch.cs" />
+    <Compile Include="Patches\DmgPopLoadInfoPatch.cs" />
     <Compile Include="Main.cs" />
-    <Compile Include="MiscGenPopupPatch.cs" />
+    <Compile Include="Patches\MiscGenPopupPatch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="StatsTickEffectsPatch.cs" />
+    <Compile Include="Patches\StatsTickEffectsPatch.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
