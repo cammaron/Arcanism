@@ -146,12 +146,17 @@ Pretty much described in the New Content section, but this is a new active meta-
 
 - Trickster's Pants: rare drop from Molorai Militia Arcanists in Old Krakengard and Vitheo's Watch
 - Tattered Wrap: rare drop from Priel Deceiver in the Malaroth's Nesting Grounds or Windwashed Pass
-![Tattered Wrap](Assets/Items/90000005.png)
+
+<img alt="Tattered Wrap" src="Assets/Items/MagicPants_Old.png" width="150"  />
+
 - Lunar Weave: rare drop from Vessel Siraethe in the Jaws of Sivakaya
-![Lunar Weave](Assets/Items/90000006.png)
+
+<img alt="Lunar Weave" src="Assets/Items/MagicPants.png" width="150"  />
 
 - Novie's Robe: purchasable in place of Spidersilk Shirt from Edwin Ansegg in Port Azure (I got lazy so this one is just a recolour of a vanilla item)
-![Novice's Robe](Assets/Items/90000007.png)
+
+<img alt="Lunar Weave" src="Assets/Items/90000007.png" width="150"  />
+
 - Spidersilk Shirt: now a rare drop from Risen Druids in Fernella's Revival Plains
 
 ## That's all!
