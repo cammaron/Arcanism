@@ -13,9 +13,7 @@ There is a **known minor compatibility issue** with the [Extended Hotbars](https
 
 This mod requires [BepInEx](https://docs.bepinex.dev/articles/user_guide/installation/index.html) which is a simple and light weight platform to support mods for Unity games, so install that in Erenshor's directory first if you haven't already! For a Steam installation, the path should look like "\Steam\steamapps\common\Erenshor\BepInEx"
 
-Grab the latest [release of Arcanism]() and place it in the BepInEx/plugins folder (if it doesn't exist yet, feel free to create it). You should place the entire folder in there, as the mod comes with image assets in its own subfolder. 
-
-So, your final install path (for a Steam release) should look like "\Steam\steamapps\common\Erenshor\BepInEx\plugins\Arcanism\"!
+Grab the latest [release of Arcanism](https://github.com/cammaron/Arcanism/releases) and unzip its contents *including the Arcanism subfolder* into the BepInEx/plugins folder (if it doesn't exist yet, feel free to create it). Your final install path (for a Steam release) should look like "\Steam\steamapps\common\Erenshor\BepInEx\plugins\Arcanism\"
 
 ## Overview
 
