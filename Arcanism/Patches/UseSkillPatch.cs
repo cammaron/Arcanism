@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using HarmonyLib;
 
 
-namespace Arcanism
+namespace Arcanism.Patches
 {
 	[HarmonyPatch(typeof(UseSkill), nameof(UseSkill.DoSkill))]
 	public class UseSkillDoSkillPatch
@@ -55,35 +55,29 @@ namespace Arcanism
 
 			if (passCheckField.Value && !__result && _skill.Id == SkillDBStartPatch.CONTROL_CHANT_SKILL_ID && vessel != null)
             {
-				Main.Log.LogInfo("UseSkill Postfix: Using Control Chant.");
 				if (vessel.GetComponent<ControlChant>() == null)
                 {
-					Main.Log.LogInfo("UseSkill Postfix: Adding ControlChant component to SpellVessel.");
 					var controlChant = vessel.gameObject.AddComponent<ControlChant>();
 					controlChant.Initialise(vessel, myself, mySpells, vesselTraversal.Field<float>("overChantLife"), vesselTraversal.Field<float>("overChantTotal"));
 				} 
 				return;
             }
 
-			if (!passCheckField.Value || _skill.Id != SkillDBStartPatch.TWIN_SPELL_SKILL_ID || myself == null || mySpells == null || vessel == null)
+			if (!passCheckField.Value || _skill.Id != SkillDBStartPatch.TWIN_SPELL_SKILL_ID || myself == null)
 				return;
 
-			Stats existingCastTarget = vesselTraversal.Field<Stats>("targ").Value;
+			__result = false; // I'll take it from here
 
-			TwinSpell twinSpell = vessel.GetComponent<TwinSpell>();
-
-			if (!mySpells.isCasting())
+			if (mySpells == null || vessel == null || !mySpells.isCasting())
             {
-				__result = false;
 				passCheckField.Value = false;
 				UpdateSocialLog.LogAdd("You must be channeling a spell to use this skill", "yellow");
 				return;
 			}
-			
+
 			Spell currentCast = mySpells.GetCurrentCast();
 			if (currentCast.Type != Spell.SpellType.Damage)
             {
-				__result = false; 
 				passCheckField.Value = false;
 				UpdateSocialLog.LogAdd("This skill only works on DAMAGE spells", "yellow");
 				return;
@@ -91,7 +85,6 @@ namespace Arcanism
 
 			if (_target == null || _target == myself)
             {
-				__result = false;
 				passCheckField.Value = false;
 				UpdateSocialLog.LogAdd("You can't hit yourself with this skill!", "yellow");
 				return;
@@ -99,38 +92,37 @@ namespace Arcanism
 
 			if (isControllingChant)
             {
-				__result = false;
 				passCheckField.Value = false;
 				UpdateSocialLog.LogAdd("Cannot be used while controlling a chant.", "yellow");
 				return;
 			}
 
-			if (_target == existingCastTarget.Myself || (twinSpell != null && twinSpell.IsTargeted(_target)))
+			Stats existingCastTarget = vesselTraversal.Field<Stats>("targ").Value;
+			TwinSpell twinSpell = vessel.GetComponent<TwinSpell>();
+			if (!TwinSpell.AllowSameTarget && (_target == existingCastTarget.Myself || (twinSpell != null && twinSpell.IsTargeted(_target))))
             {
-				__result = false;
 				passCheckField.Value = false;
 				UpdateSocialLog.LogAdd("Cannot be used on the same target twice.", "yellow");
 				return;
 			}
 
-			bool success;
 			if (twinSpell == null)
 			{
 				twinSpell = vessel.gameObject.AddComponent<TwinSpell>();
 				twinSpell.Initialise(vessel, myself, __instance);
 			}
-			success = twinSpell.AddTarget(_target);
-			if (!success)
+
+			if (!twinSpell.AddTarget(_target))
             {
 				if (twinSpell.TwinnedTargetCount == 0)
 					GameObject.Destroy(twinSpell); // no point having the component on there if we weren't even able to add a single target
 
-				__result = false;
 				passCheckField.Value = false;
 				return;
 			}
 
-			__result = twinSpell.TwinnedTargetCount >= twinSpell.MaxTwinTargets; // If we've hit the max twin count, apply cooldown immediately -- otherwise it'll be applied on spell end
+			if (twinSpell.TwinnedTargetCount >= twinSpell.MaxTwinTargets) // If we've hit the max twin count, apply cooldown immediately -- otherwise it'll be applied on spell end
+				twinSpell.ApplyCooldown();
 		}
 	}
 }

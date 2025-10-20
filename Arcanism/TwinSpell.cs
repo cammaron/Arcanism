@@ -1,11 +1,14 @@
 ﻿using UnityEngine;
 using System;
 using System.Collections.Generic;
+using Arcanism.Patches;
 
 namespace Arcanism
 {
     class TwinSpell : SkillAbility
     {
+        public static bool AllowSameTarget = false;
+
         private SpellVessel vessel;
         private Character caster;
         private UseSkill skillSource;
@@ -56,7 +59,8 @@ namespace Arcanism
             }
 
             int targetNumber = targets.Count + 2; // targets in queue plus original spell target and this new hypothetical target
-            int additionalManaCost = (int)Mathf.Pow(1.25f, targetNumber - 1) * vessel.spell.ManaCost;
+            float costExponent = 1.75f * (1 - c.MySkills.GetAscensionRank(SkillDBStartPatch.MIND_SPLIT_ASCENSION_ID) * SkillDBStartPatch.MIND_SPLIT_COST_FACTOR); // at 1.75, 2 casts costs 37.5% more mana than casting twice normally. At 3 casts, it's around 94% more than 3 normal casts. With max Mind Split, it's a 1.225 exponent and only costs around 24% more.
+            int additionalManaCost = (int) (Mathf.Pow(costExponent, targetNumber - 1) * vessel.spell.ManaCost);
             if (caster.MyStats.GetCurrentMana() - vessel.spell.ManaCost < additionalManaCost)
             {
                 UpdateSocialLog.LogAdd("You need more mana!", "yellow");
@@ -80,7 +84,8 @@ namespace Arcanism
 
         public override void ApplyCooldown(float cooldownFactor = 1f)
         {
-            base.ApplyCooldown(cooldownFactor);
+            float ascensionCdReduction = caster.MySkills != null ? 1f - (caster.MySkills.GetAscensionRank(SkillDBStartPatch.REFRACTION_ASCENSION_ID) * SkillDBStartPatch.REFRACTION_COOLDOWN_FACTOR) : 1f;
+            base.ApplyCooldown(cooldownFactor * ascensionCdReduction);
             coolingDown = true;
         }
 

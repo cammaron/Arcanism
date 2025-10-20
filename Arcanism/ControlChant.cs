@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using HarmonyLib;
+using Arcanism.Patches;
 
 namespace Arcanism
 {
@@ -54,7 +55,7 @@ namespace Arcanism
                 {
                     drainProgress -= 1f;
                     caster.MyStats.ReduceMana(1);
-                    if (caster.MyStats.CurrentMana == 0)
+                    if (caster.MyStats.CurrentMana <= vessel.spell.ManaCost) // At least enough mana to finish casting the spell (which isn't deducted 'til execution time) must remain in the bank
                     {
                         Backfire(totalManaDrain);
                     }
@@ -99,7 +100,7 @@ namespace Arcanism
 
                 if (Random.Range(0, 100) < backfireChance)
                 {
-                    Backfire(Mathf.RoundToInt(vessel.spell.ManaCost * 1.2f));
+                    Backfire(Mathf.RoundToInt(vessel.spell.ManaCost));
 
                     if (endSpellOnBackfire)
                         allowTargetDamage = false;
@@ -124,12 +125,21 @@ namespace Arcanism
                 EndSpell(cooldownFactor);
         }
 
-        public void Backfire(int damage)
+        public void Backfire(int manaBurned)
         {
+            int damage = Mathf.RoundToInt(manaBurned * 2f);
             UpdateSocialLog.CombatLogAdd("BACKFIRE!! You fail to control the chaotic energy in time, and your own mana hurts you for " + damage + " damage!", "red");
 
             caster.DamageMe(damage, true, vessel.spell.MyDamageType, caster, true, false);
             caster.MyAudio.PlayOneShot(vessel.spell.CompleteSound, GameData.SFXVol * caster.MyAudio.volume * 0.8f);
+        }
+
+        public override void ApplyCooldown(float cooldownFactor = 1f)
+        {
+            base.ApplyCooldown(cooldownFactor);
+            // Somewhat uniquely, ControlChant can be responsible for triggering both the spell's cooldown AND its own skill cooldown
+            var skill = GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.CONTROL_CHANT_SKILL_ID);
+            GameData.HKMngr.GetHotkeysForSkill(skill).ForEach(hk => hk.Cooldown = skill.Cooldown);
         }
     }
 }

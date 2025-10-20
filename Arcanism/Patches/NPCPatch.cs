@@ -2,7 +2,7 @@
 using HarmonyLib;
 
 
-namespace Arcanism
+namespace Arcanism.Patches
 {
     [HarmonyPatch(typeof(NPC), "Start")]
     public class NPCStartPatch
@@ -21,13 +21,18 @@ namespace Arcanism
                     shop.VendorDesc = "Exotic Book";
                     Traverse.Create(__instance.GetComponent<NPCDialogManager>()).Field("isVendor").SetValue(true);
                 }
-                var expertControlBook = GameData.ItemDB.GetItemByID(ItemDatabaseStartPatch.EXPERT_CONTROL_BOOK_ITEM_ID);
+                var expertControlBook = GameData.ItemDB.GetItemByID(ItemId.EXPERT_CONTROL);
                 if (!shop.ItemsForSale.Contains(expertControlBook)) // assuming if either one is already there, the other must be
                 {
                     Main.Log.LogInfo("Adding items to Braxon Manfred's's shop.");
                     shop.ItemsForSale.Add(expertControlBook);
-                    shop.ItemsForSale.Add(GameData.ItemDB.GetItemByID(ItemDatabaseStartPatch.TWIN_SPELL_BOOK_ITEM_ID));
+                    shop.ItemsForSale.Add(GameData.ItemDB.GetItemByID(ItemId.TWIN_SPELL));
                 }
+            } else if (__instance.NPCName == "Edwin Ansegg")
+            {
+                var shop = __instance.GetComponent<VendorInventory>();
+                shop.ItemsForSale.Remove(GameData.ItemDB.GetItemByID(ItemId.SPIDERSILK_SHIRT));
+                shop.ItemsForSale.Add(GameData.ItemDB.GetItemByID(ItemId.NOVICE_ROBE));
             }
         }
     }

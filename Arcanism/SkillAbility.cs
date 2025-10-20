@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections;
 using UnityEngine;
 
 namespace Arcanism
@@ -24,9 +24,21 @@ namespace Arcanism
             if (!IsPlayer) return;
 
             float cooldown = Skill.Cooldown * cooldownFactor; // unlike spells, skills have the * 60 baked into their cooldown stat already
-            GameData.HKMngr.GetHotkeysForSkill(Skill).ForEach(hk =>
+
+            // This is suuuuuch a hack but when I originally wrote this I didn't realise Hotkeys.DoHotkeyTask would override my manually applied cooldowns whether returning true or false from DoSkill,
+            // and I am *absolutely* over making this mod by now and just want to play the damn game, so... eat lead, proper designs!
+            SkillSource.StartCoroutine(DoCooldownNextFrame(cooldown)); // aaaaaand to make it even more hacky, TwinSpell gets destroyed when the cast finishes so I also have to spawn the coroutine on another game object before it dies. 
+        }
+
+        private IEnumerator DoCooldownNextFrame(float cooldown)
+        {
+            yield return new WaitForSeconds(0.2f);
+
+            var hks = GameData.HKMngr.GetHotkeysForSkill(Skill);
+            UpdateSocialLog.LogAdd("Finished waiting to apply cooldown. Iterating hotkeys looking for Twin Spell skill match. Hotkey match count: " + hks.Count, "red");
+            hks.ForEach(hk =>
             {
-                if (hk.Cooldown < 20f)
+                if (hk.Cooldown <= 20f || cooldown < hk.Cooldown)
                     hk.Cooldown = cooldown;
             });
         }

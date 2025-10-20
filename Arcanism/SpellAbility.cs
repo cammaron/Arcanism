@@ -25,7 +25,7 @@ namespace Arcanism
             ApplyCooldown(cooldownFactor);
         }
 
-        public void ApplyCooldown(float cooldownFactor = 1f)
+        public virtual void ApplyCooldown(float cooldownFactor = 1f)
         {
             if (!IsPlayer) return;
 
