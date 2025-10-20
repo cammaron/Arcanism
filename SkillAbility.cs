@@ -35,7 +35,6 @@ namespace Arcanism
             yield return new WaitForSeconds(0.2f);
 
             var hks = GameData.HKMngr.GetHotkeysForSkill(Skill);
-            UpdateSocialLog.LogAdd("Finished waiting to apply cooldown. Iterating hotkeys looking for Twin Spell skill match. Hotkey match count: " + hks.Count, "red");
             hks.ForEach(hk =>
             {
                 if (hk.Cooldown <= 20f || cooldown < hk.Cooldown)
