@@ -35,7 +35,7 @@ Note that this mod has been balanced with Arcanist mains in mind and so the Simp
 
 I recommend using the following mods alongside Arcanism for the best experience.
 
-- My own [BigDamage](https://github.com/cammaron/erenshor-mods/tree/master/BigDamage) mod to ensure you can read how much damage you're doing!
+- My own [BigDamage](https://github.com/cammaron/BigDamage) mod to ensure you can read how much damage you're doing!
 - The [Loot Rarities](https://discord.com/channels/1099145747364057118/1419995182710919279) mod without which you will NOT be able to get over 100 resonance, which is required for Arcanist endgame builds
 
 ### Changes
