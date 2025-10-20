@@ -8,7 +8,7 @@ using System.Reflection.Emit;
 namespace BigDamage.Patches
 {
 	[HarmonyPatch(typeof(Stats), "TickEffects")]
-	public class StatsTickEffectsPatch
+	public class Stats_TickEffects
 	{
 
 
@@ -22,7 +22,7 @@ namespace BigDamage.Patches
 			CodeMatcher matcher = new CodeMatcher(instructions);
 			MethodInfo damageMe = AccessTools.Method(typeof(Character), nameof(Character.DamageMe));
 			FieldInfo getCreditDPS = AccessTools.Field(typeof(StatusEffect), nameof(StatusEffect.CreditDPS));
-			MethodInfo getStatusEffectsArray = AccessTools.PropertyGetter(typeof(Stats), "StatusEffects");
+            MethodInfo getStatusEffectsArray = AccessTools.PropertyGetter(typeof(Stats), "StatusEffects");
 
 			matcher.MatchStartForward(new CodeMatch(OpCodes.Callvirt, damageMe)).ThrowIfNotMatch("Unable to find DamageMe call in TickEffects.")
 				.MatchBack(false, new CodeMatch(OpCodes.Ldnull)).ThrowIfNotMatch("Unable to find ldnull argument insertion prior to DamageMe.")

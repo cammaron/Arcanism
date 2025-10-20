@@ -6,7 +6,7 @@ using System.Reflection.Emit;
 namespace BigDamage.Patches
 {
 	[HarmonyPatch(typeof(Misc), nameof(Misc.GenPopup))]
-	public class MiscGenPopupPatch
+	public class Misc_GenPopup
 	{
 
 		/*
@@ -22,8 +22,6 @@ namespace BigDamage.Patches
 				.ThrowIfInvalid("Unable to find Vector3.Distance comparison for DmgPop display")
 				.Advance(1)
 				.Set(OpCodes.Ldc_R4, Main.maxDistance.Value)
-				//.RemoveInstruction()
-				//.Insert(new CodeInstruction(OpCodes.Ldc_R4, Main.maxDistance))
 				.Instructions();
 		}
 
