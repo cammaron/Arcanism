@@ -1,7 +1,6 @@
-.vs/
-*/obj
-*/debug
-*/bin
-*/Properties
-
+.vs/*
+bin/*
+obj/*
+Properties/*
+debug/*
 Libraries/*
