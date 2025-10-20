@@ -87,6 +87,7 @@ Every Arcanist spell has been rebalanced by hand and with great care. Target dam
 	- Mana Charge 1 and 2 have both been nerfed accordingly, and the mana regen from Aura of Brax has also been nerfed. Aura of Brax has had its other stat bonuses increased to make up for this.
 	- Natural regen from Endurance, Wisdom and their respective proficiencies has been boosted, so that these stats play a much more important part in keeping you alive and fighting
 	- You will run out of mana during fights if you don't use it wisely, and simply sitting still during a fight will no longer fill your mana almost immediately, making the Arcanist's Meditative Trance skill useful
+	- On that note, it was too easy to just run out of mana, use trance, and keep fighting, so Meditative Trance itself has been changed to restore 70%->50% mana, with a 14->60s cooldown, but a faster 7s->4s cast time.
 - Spell damage formula has been completely changed so that it has no "additive" damage component based on int any more, meaning weaker spells will scale but will still always be proportionately weaker than later spells
 	- This was necessary both to ensure unlocking more powerful spells felt rewarding, and because early spells hitting so hard meant they were SIGNIFICANTLY more damage:mana efficient. No longer!
 	- The new formula is entirely multiplicative and has stronger scaling with your character level, Intelligence and Intelligence Proficiency
