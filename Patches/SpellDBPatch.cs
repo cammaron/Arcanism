@@ -133,7 +133,7 @@ namespace Arcanism.Patches
 			UpdateControlSpell(__instance, "4865624", 1000, 24); // Call of the Void
 			UpdateControlSpell(__instance, "39532889", 2000, 34); // Twisting Mind
 
-			var meditativeTrance = UpdateSpell(__instance, "14737962", 0, null, 60);
+			var meditativeTrance = UpdateSpell(__instance, "14737962", 0, 4, 60);
 			meditativeTrance.PercentManaRestoration = 50;
 			meditativeTrance.SpellDesc = $"Restores {meditativeTrance.PercentManaRestoration}% of your mana after a long cast time";
 
