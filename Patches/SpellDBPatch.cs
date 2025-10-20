@@ -133,9 +133,41 @@ namespace Arcanism.Patches
 			UpdateControlSpell(__instance, "4865624", 1000, 24); // Call of the Void
 			UpdateControlSpell(__instance, "39532889", 2000, 34); // Twisting Mind
 
-			var nourished =__instance.GetSpellByID("1735287");
-			nourished.HP = 9; // Nerf regen bonuses from food because I'm buffing regen from stats
-			nourished.Mana = 9;
+			var nourished = __instance.GetSpellByID("1735287");
+			nourished.HP = 5; // Nerf regen bonuses from food because I'm buffing regen from stats
+			nourished.Mana = 4;
+
+			var manaCharge1 = __instance.GetSpellByID("49947232");
+			manaCharge1.Mana = 30;
+
+			var manaCharge2 = __instance.GetSpellByID("913744");
+			manaCharge2.Mana = 60;
+
+			var auraOfBrax1 = __instance.GetSpellByID("29302546");
+			auraOfBrax1.Mana = 2;
+			auraOfBrax1.Int = auraOfBrax1.Cha = auraOfBrax1.Wis = 6;
+
+			var auraOfBrax2 = __instance.GetSpellByID("20833458");
+			auraOfBrax2.Mana = 4;
+			auraOfBrax2.Int = auraOfBrax2.Cha = auraOfBrax2.Wis = 12;
+
+			var auraOfBrax3 = __instance.GetSpellByID("9382716");
+			auraOfBrax3.Mana = 6;
+			auraOfBrax3.Int = 24;
+			auraOfBrax3.Cha = 17; 
+			auraOfBrax3.Wis = 17;
+
+			var auraOfBrax4 = __instance.GetSpellByID("1190816");
+			auraOfBrax4.Mana = 9;
+			auraOfBrax4.Int = 36;
+			auraOfBrax4.Cha = 22;
+			auraOfBrax4.Wis = 22;
+
+			var auraOfBrax5 = __instance.GetSpellByID("8447686");
+			auraOfBrax5.Mana = 12;
+			auraOfBrax5.Int = 45;
+			auraOfBrax5.Cha = 35;
+			auraOfBrax5.Wis = 30;
 		}
 	}
 }

@@ -83,7 +83,8 @@ Every Arcanist spell has been rebalanced by hand and with great care. Target dam
 
 - Regen has been changed to be more stat focused
 	- The "meditative state" (sitting still regen buff) has been massively nerfed from 50x to 2.5x
-	- The "Nourished" buff from food has had its regen bonus reduced from 25 HP and Mana per tick to 9
+	- The "Nourished" buff from food has had its regen bonus reduced from 25 HP and Mana per tick to 5 and 4 respectively.
+	- Mana Charge 1 and 2 have both been nerfed accordingly, and the mana regen from Aura of Brax has also been nerfed. Aura of Brax has had its other stat bonuses increased to make up for this.
 	- Natural regen from Endurance, Wisdom and their respective proficiencies has been boosted, so that these stats play a much more important part in keeping you alive and fighting
 	- You will run out of mana during fights if you don't use it wisely, and simply sitting still during a fight will no longer fill your mana almost immediately, making the Arcanist's Meditative Trance skill useful
 - Spell damage formula has been completely changed so that it has no "additive" damage component based on int any more, meaning weaker spells will scale but will still always be proportionately weaker than later spells
