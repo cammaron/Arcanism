@@ -32,6 +32,27 @@ namespace Arcanism.Patches
                 if (!__instance.RareDrop.Contains(shirt))
                     __instance.RareDrop.Add(shirt);
             }
+            else if (npc.NPCName == "Molorai Militia Arcanist")
+            {
+                Main.Log.LogInfo("Adding Trickster's Pants to Molorai Militia Arcanist's loot table.");
+                var pants = GameData.ItemDB.GetItemByID(ItemId.TRICKSTERS_PANTS);
+                if (!__instance.RareDrop.Contains(pants))
+                    __instance.RareDrop.Add(pants);
+            }
+            else if (npc.NPCName == "Priel Deceiver")
+            {
+                Main.Log.LogInfo("Adding Tattered Wrap to Priel Deceiver's loot table.");
+                var pants = GameData.ItemDB.GetItemByID(ItemId.TATTERED_WRAP);
+                if (!__instance.RareDrop.Contains(pants))
+                    __instance.RareDrop.Add(pants);
+            }
+            else if (npc.NPCName == "Vessel Siraethe")
+            {
+                Main.Log.LogInfo("Adding Lunar Weaveto Vessel Siraethe's loot table.");
+                var pants = GameData.ItemDB.GetItemByID(ItemId.LUNAR_WEAVE);
+                if (!__instance.RareDrop.Contains(pants))
+                    __instance.RareDrop.Add(pants);
+            }
         }
     }
 }
