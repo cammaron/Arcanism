@@ -4,7 +4,7 @@ using TMPro;
 using System.Collections;
 using System.Collections.Generic;
 using HarmonyLib;
-
+using Arcanism.SkillExtension;
 
 namespace Arcanism.Patches
 {

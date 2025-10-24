@@ -27,14 +27,10 @@ namespace Arcanism
 
         public virtual void ApplyCooldown(float cooldownFactor = 1f)
         {
-            if (!IsPlayer) return;
-
-            float cooldownReductionFactor = CasterSkills != null ? 1f - (CasterSkills.GetAscensionRank("7758218") * 0.1f) : 1f; // Arcanist Cooldown Reduction
-            float cooldown = Vessel.spell.Cooldown * 60f * cooldownFactor * cooldownReductionFactor; 
-            GameData.HKMngr.GetHotkeysForSpell(Vessel.spell).ForEach(hk => 
-            {
-                hk.Cooldown = cooldown;
-            });
+            var coolMan = SpellSource.MyChar.GetComponent<CooldownManager>();
+            
+            if (coolMan != null)
+                coolMan.AddCooldown(Vessel.spell, cooldownFactor);
         }
     }
 

@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Arcanism</RootNamespace>
     <AssemblyName>Arcanism</AssemblyName>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <TargetFrameworkProfile />
@@ -18,7 +18,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>bin\Debug\Arcanism\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -34,8 +34,8 @@
   <ItemGroup>
     <Reference Include="BepInEx">
       <HintPath>..\Libraries\BepInEx.dll</HintPath>
+      <Private>False</Private>
     </Reference>
-    <Reference Include="netstandard" />
     <Reference Include="0Harmony">
       <HintPath>..\Libraries\0Harmony.dll</HintPath>
       <Private>False</Private>
@@ -48,6 +48,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.ValueTuple, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.ValueTuple.4.3.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -81,8 +82,15 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ControlChant.cs" />
-    <Compile Include="HotkeyAbility.cs" />
+    <Compile Include="Patches\HotkeyManager.cs" />
+    <Compile Include="SkillExtension\ControlChant.cs" />
+    <Compile Include="CooldownManager.cs" />
+    <Compile Include="SkillExtension\ExtensionManager.cs" />
+    <Compile Include="SkillExtension\HotkeyAbility.cs" />
+    <Compile Include="SkillExtension\IRetargetingSkill.cs" />
+    <Compile Include="Patches\Character.cs" />
+    <Compile Include="Patches\Hotkeys.cs" />
+    <Compile Include="Patches\Inventory.cs" />
     <Compile Include="Patches\ItemDatabasePatch.cs" />
     <Compile Include="Patches\LootTablePatch.cs" />
     <Compile Include="Main.cs" />
@@ -92,9 +100,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Patches\SpellVesselPatch.cs" />
     <Compile Include="Patches\StatsPatch.cs" />
-    <Compile Include="SkillAbility.cs" />
-    <Compile Include="SpellAbility.cs" />
-    <Compile Include="TwinSpell.cs" />
+    <Compile Include="SkillExtension\ISpellDamageModifier.cs" />
+    <Compile Include="SkillExtension\ISpellCooldownModifier.cs" />
+    <Compile Include="SkillExtension\SkillAbility.cs" />
+    <Compile Include="SkillExtension\ExtendedSkill.cs" />
+    <Compile Include="SkillExtension\SkillBehaviour.cs" />
+    <Compile Include="SkillExtension\SpellAbility.cs" />
+    <Compile Include="SkillExtension\TwinSpell.cs" />
     <Compile Include="Patches\UseSkillPatch.cs" />
     <Compile Include="Patches\NPCPatch.cs" />
   </ItemGroup>
@@ -108,6 +120,9 @@
     <Content Include="Assets\Items\90000007.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Assets\Items\90000015.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Assets\Items\MagicPants.png" />
     <Content Include="Assets\Items\MagicPants_Old.png" />
     <Content Include="Assets\Items\MagicPants_Patched.png" />
@@ -116,5 +131,6 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
