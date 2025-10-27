@@ -11,7 +11,7 @@ namespace Arcanism
 
         public static void AddExtension(Skill skill, GetOrCreateType creator)
         {
-            extensionCreatorBySkillId.Add(skill.Id, creator);
+            extensionCreatorBySkillId[skill.Id] = creator;
         }
 
         public static bool GetExtension(Skill skill, Character caster, SpellVessel vessel, out ExtendedSkill extension)

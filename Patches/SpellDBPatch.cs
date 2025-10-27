@@ -16,6 +16,7 @@ namespace Arcanism.Patches
 		public const string INFERNIS_SPELL_ID = "59622570";
 		public const string MAJOR_LIGHTNING_SPELL_ID = "24045294";
 		public const string SHORT_STUN_SPELL_ID = "9000000";
+		public const string JOLT_SPELL_ID = "27880688";
 		public const string PARASITIC_TWIN_SPELL_ID = "9000001";
 		public const string DESERT_COFFIN_SPELL_ID = "9000002";
 		public const string EXHAUSTION_SPELL_ID = "9000003";
@@ -56,17 +57,6 @@ namespace Arcanism.Patches
 
 		static Spell UpdateSpell(SpellDB db, string id, int manaCost, float? castTime = null, float? cooldownTime = null, float? duration = null)
 		{
-			// NB: "SpellDurationInTicks" -- AFAICT a tick is 5 seconds [update: seems to be 3? sure looked like it was iterating over 300ms deducting 60ms per second, which looks like 5 seconds per tick...]
-			// No idea why Sleep shows a duration of 27s; in theory it must be 30 due to duration in ticks = 6... but I just tested with stopwatch, and it lasted 25!!
-			// Spell charge time is measured in 60ths of a second. So 60 = 1 second, 90 = 1.5 seconds.
-			// Cooldown is in straight up seconds (float)
-			// Jolt and Concuss both trigger the "GEN - STUN" spell effect, which has a  duration of 2 ticks which in theory might be 10 seconds but I recorded and it was maybe 7 - 7.5.
-			// Aha! If you apply a status effect in the middle of a tick, it loses some or all of that tick, because they're processed in 5 second blocks!
-
-			// Jolt stun effect has "UnstableDuration=true" which means even though it doesn't outright break immediately on damage, there's still a 20% chance of it ending each time dmg is taken
-
-			// Immolation hits about 8 times over its "24" duration. Somehow.
-
 			var spell = db.GetSpellByID(id);
 			return UpdateSpell(spell, manaCost, castTime, cooldownTime, duration);
 		}
@@ -134,6 +124,8 @@ namespace Arcanism.Patches
 			WithScreenshake(UpdateTargetSpell(__instance, "51152210", 950, 2880, 3.5f, 7, null, 1600), 0.6f, 0.2f); // Aetherstorm -- passing incorrect description param
 			WithScreenshake(UpdateTargetSpell(__instance, "48295394", 2000, 6000, 7.5f, 24), 1.75f, 0.35f); // Tenebris 
 
+			UpdateTargetSpell(__instance, "57673295", 360, 1400, 1, 3); // Mithril Shards -- only used on weapons
+
 			UpdateShieldSpell(__instance, HARDENED_SKIN_SPELL_ID, 30, 300, 0.5f, 120, 12); // Hardened Skin
 			UpdateShieldSpell(__instance, "9867251", 350, 1500, 0.5f, 200, 12); // Magical Skin
 			UpdateShieldSpell(__instance, "7281576", 700, 6000, 0.5f, 200, 12); // Magical Skin II
@@ -152,7 +144,7 @@ namespace Arcanism.Patches
 			shortStun.SpellDurationInTicks = 1; // Actually wanted 1.5 seconds, but without very hacky mods to the tick system... this will have to do for now. NB there *is* a short stun effect with 1 tick duration already in the spell DB but it isn't unstable, and this must be.
 			
 			spellsToAdd.Add(shortStun);
-			UpdateTargetSpell(__instance, "27880688", 200, 200, 0.5f, 1).StatusEffectToApply = shortStun; // Jolt --  much shorter stun duration, but can be cast repeatedly
+			UpdateTargetSpell(__instance, JOLT_SPELL_ID, 200, 200, 0.5f, 1).StatusEffectToApply = shortStun; // Jolt --  much shorter stun duration, but can be cast repeatedly
 			UpdateTargetSpell(__instance, "16834290", 350, 500, 0.5f, 1).StatusEffectToApply = shortStun; // Concuss
 
 			// DoTs
@@ -166,6 +158,7 @@ namespace Arcanism.Patches
 			funeralPyre.SpellDesc = $"Unseen forces tear at the target's spirit, dealing ({funeralPyre.TargetDamage} / tick) damage over a short duration.";
 			funeralPyre.StatusEffectMessageOnNPC = $"feels dark forces stretching apart the fabric of their soul!";
 			funeralPyre.name = funeralPyre.SpellName = FUNERAL_PYRE_NAME_CHANGE;
+			funeralPyre.SpellIcon = __instance.GetSpellByID("5998729").SpellIcon; // Druid's Theft of Life icon.
 			var weightOfSea = __instance.GetSpellByID("7550883");
 			funeralPyre.SpellChargeFXIndex = 94; // borrowed from um... Druid's Arterial Decay spell
 			funeralPyre.SpellResolveFXIndex = 59;
@@ -181,11 +174,14 @@ namespace Arcanism.Patches
 			parasiticTwin.StatusEffectMessageOnNPC = $"feels their life force being drained by a parasitic twin!";
 			parasiticTwin.name = parasiticTwin.SpellName = "Parasitic Twin";
 			parasiticTwin.Line = Spell.SpellLine.Global_Void_DOT;
+			parasiticTwin.SpellIcon = __instance.GetSpellByID("10488989").SpellIcon; // Score! Found a ref to the icon I want. Druid's Soul Tap spell.
 			spellsToAdd.Add(parasiticTwin);
 
 			var controlExhaustion = GameObject.Instantiate(funeralPyre); // The exhaustion debuff effect after a Perfect Release w/ Control Chant -- not a spell that can be cast.
 			controlExhaustion.Id = EXHAUSTION_SPELL_ID;
 			UpdateSpell(controlExhaustion, 0, 0, 0, 120);
+			controlExhaustion.MovementSpeed = controlExhaustion.TargetDamage = (int) (controlExhaustion.Haste = 0f);
+			controlExhaustion.SpellIcon = coma.SpellIcon;
 			controlExhaustion.SpellDesc = "You are exhausted from using Perfect Release.";
 			controlExhaustion.StatusEffectMessageOnNPC = $"is exhausted after going all out!";
 			controlExhaustion.name = controlExhaustion.SpellName = "Perfect Release Exhaustion";
@@ -207,6 +203,7 @@ namespace Arcanism.Patches
 			desertCoffin.Cooldown = 30;
 			desertCoffin.ManaCost = 1000;
 			desertCoffin.SpellChargeTime = 8;
+			desertCoffin.SpellIcon = __instance.GetSpellByID("9309339").SpellIcon; // Blessing of Brax icon. That'll do.
 			desertCoffin.SpellDesc = $"Channel a portion of Brax's fury as he conjured a great whirlwind of sand to bury his own people. Deals {desertCoffin.TargetDamage} damage to the target and nearby enemies.";
 			spellsToAdd.Add(desertCoffin);
 

@@ -31,17 +31,22 @@ namespace Arcanism
 
         private Character character;
 
-        public static CooldownManager AddToCharacter(Character c)
+        public static CooldownManager GetOrCreate(Character c)
         {
-            var manager = c.gameObject.AddComponent<CooldownManager>();
-            manager.character = c;
-            return manager;
+            var coolMan = c.GetComponent<CooldownManager>();
+
+            if (coolMan == null)
+            {
+                coolMan = c.gameObject.AddComponent<CooldownManager>();
+                coolMan.character = c;
+            }
+
+            return coolMan;
         }
 
         public float AddCooldown(Skill skill, float cooldownFactor = 1f, bool allowOverride = false)
         {
             // skill cooldowns as measured in 60ths of seconds, as if cd is 1s the value will be 60, so... gotta divide.
-            if (character.MySkills.isPlayer) Main.Log.LogInfo($"CooldownManager: AddCoolown called for skill {skill.SkillName}.");
             return AddCooldown(CooldownType.SKILL, skill.Id, (skill.Cooldown / 60f) * cooldownFactor, allowOverride);
         }
 
@@ -53,7 +58,7 @@ namespace Arcanism
                 additionalCooldownFactor -= character.MySkills.GetAscensionRank("7758218") * 0.1f; // Arcanist Cooldown Reduction
 
             float cooldown = spell.Cooldown * cooldownFactor * additionalCooldownFactor;
-            return AddCooldown(CooldownType.SPELL, spell.Id, cooldown);
+            return AddCooldown(CooldownType.SPELL, spell.Id, cooldown, allowOverride);
         }
 
         /*public float AddCooldown(Item item, float cooldownFactor = 1f)
@@ -65,7 +70,7 @@ namespace Arcanism
             return 0;
         }*/
 
-        private float AddCooldown(CooldownType type, string id, float durationInSeconds, bool allowOverride = false)
+        private float AddCooldown(CooldownType type, string id, float durationInSeconds, bool allowOverride)
         {
             float proposedEndTime = Time.realtimeSinceStartup + durationInSeconds;
 
@@ -73,7 +78,7 @@ namespace Arcanism
 
             if (!allowOverride && map.TryGetValue(id, out float existingEndTime) && existingEndTime > proposedEndTime) // Don't allow overriding a longer existing cooldown (unless allowOverride explicitly)
                 return existingEndTime;
-            if (character.MySkills.isPlayer) Main.Log.LogInfo($"CooldownManager: Adding {durationInSeconds}s cooldown for {id}");
+
             map[id] = proposedEndTime;
             return proposedEndTime;
         }

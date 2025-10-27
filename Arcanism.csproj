@@ -83,12 +83,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Patches\HotkeyManager.cs" />
-    <Compile Include="SkillExtension\ControlChant.cs" />
+    <Compile Include="Patches\WandBolt.cs" />
+    <Compile Include="Skills\ControlChant.cs" />
     <Compile Include="CooldownManager.cs" />
     <Compile Include="SkillExtension\ExtensionManager.cs" />
-    <Compile Include="SkillExtension\HotkeyAbility.cs" />
     <Compile Include="SkillExtension\IRetargetingSkill.cs" />
-    <Compile Include="Patches\Character.cs" />
     <Compile Include="Patches\Hotkeys.cs" />
     <Compile Include="Patches\Inventory.cs" />
     <Compile Include="Patches\ItemDatabasePatch.cs" />
@@ -102,11 +101,8 @@
     <Compile Include="Patches\StatsPatch.cs" />
     <Compile Include="SkillExtension\ISpellDamageModifier.cs" />
     <Compile Include="SkillExtension\ISpellCooldownModifier.cs" />
-    <Compile Include="SkillExtension\SkillAbility.cs" />
     <Compile Include="SkillExtension\ExtendedSkill.cs" />
-    <Compile Include="SkillExtension\SkillBehaviour.cs" />
-    <Compile Include="SkillExtension\SpellAbility.cs" />
-    <Compile Include="SkillExtension\TwinSpell.cs" />
+    <Compile Include="Skills\TwinSpell.cs" />
     <Compile Include="Patches\UseSkillPatch.cs" />
     <Compile Include="Patches\NPCPatch.cs" />
   </ItemGroup>
@@ -133,4 +129,8 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>copy Arcanism.dll "C:\Program Files (x86)\Steam\steamapps\common\Erenshor\BepInEx\scripts\"
+copy Arcanism.pdb "C:\Program Files (x86)\Steam\steamapps\common\Erenshor\BepInEx\scripts\"</PostBuildEvent>
+  </PropertyGroup>
 </Project>

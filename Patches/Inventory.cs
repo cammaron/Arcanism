@@ -10,30 +10,52 @@ namespace Arcanism.Patches
     [HarmonyPatch(typeof(Inventory), nameof(Inventory.UpdateInvStats))]
     public class Inventory_UpdateInvStats
     {
-        static void CheckSetBonus(Inventory inventory, ItemIcon currentSlot)
+        static void CheckSetBonus(Inventory inventory)
         {
-			if (currentSlot == null || inventory == null) return;
+			bool updatedStats = false;
 
-			ItemId currentSlotId = (ItemId)int.Parse(currentSlot.MyItem.Id);
-			if (!ItemDatabase_Start.setBonusesByItemId.TryGetValue(currentSlotId, out var allBonusStats))
-				return;
+			var equippedItemsById = ConvertToSlotsByItemId(inventory);
 
-            foreach(var otherSlot in inventory.EquipmentSlots)
+			foreach(var catalystEntry in ItemDatabase_Start.setBonusesByItemId)
             {
-				string otherSlotIdStr = otherSlot?.MyItem?.Id;
-                if (otherSlot == currentSlot || otherSlotIdStr == null) continue;
-
-				ItemId otherSlotId = (ItemId)int.Parse(otherSlotIdStr);
-				if (!allBonusStats.TryGetValue(otherSlotId, out var bonusStatsForItem))
+				if (!equippedItemsById.ContainsKey(catalystEntry.Key.Id()))
 					continue;
 
-				AddSetBonuses(inventory, currentSlot, bonusStatsForItem);
-            }
+				// We've got a catalyst, now we have to check if they have the other item equipped -- a single catalyst can have multiple different pairing items, and give a different bonus to each one.
+				// (Noting it's the pairing item that actually receives the bonus -- the only point of that being tha
+				foreach (var pairingOption in catalystEntry.Value)
+				{
+					if (equippedItemsById.TryGetValue(pairingOption.Key.Id(), out var slotReceivingBonus))
+					{
+						AddSetBonuses(inventory, slotReceivingBonus, pairingOption.Value);
+						updatedStats = true;
+					}
+				}
+			}
+
+			if (inventory.isPlayer && updatedStats)
+            {
+				inventory.GetComponent<Stats>().CalcStats();
+				inventory.PlayerStatDisp.UpdateDisplayStats();
+			}
         }
 
-		static void AddSetBonuses(Inventory inv, ItemIcon sourceItemSlot, Item bonusStats)
+		private static Dictionary<string, Item.SlotType> ConvertToSlotsByItemId(Inventory inventory)
+        {
+			var map = new Dictionary<string, Item.SlotType>();
+			var simPlayer = inventory.GetComponent<SimPlayer>();
+			if (simPlayer == null)
+				foreach (var slot in inventory.EquipmentSlots)
+					map[slot.MyItem.Id] = slot.ThisSlotType;
+			else
+				foreach (var slot in simPlayer.MyEquipment)
+					map[slot.MyItem.Id] = slot.ThisSlotType;
+
+			return map;
+		}
+
+		static void AddSetBonuses(Inventory inv, Item.SlotType slotType, Item bonusStats)
 		{
-			Item sourceItem = sourceItemSlot.MyItem;
 			inv.ItemHP += bonusStats.HP;
 			inv.ItemAC += bonusStats.AC;
 			inv.ItemMana += bonusStats.Mana;
@@ -49,12 +71,12 @@ namespace Arcanism.Patches
 			inv.ItemER += bonusStats.ER;
 			inv.ItemPR += bonusStats.PR;
 			inv.ItemVR += bonusStats.VR;
-			if (sourceItem.RequiredSlot == Item.SlotType.Primary)
+			if (slotType == Item.SlotType.Primary)
 			{
 				inv.MHDelay += bonusStats.WeaponDly;
 				inv.MHDmg += bonusStats.WeaponDmg;
 			}
-			else if (sourceItem.RequiredSlot == Item.SlotType.Secondary)
+			else if (slotType == Item.SlotType.Secondary)
 			{
 				inv.OHDelay += bonusStats.WeaponDly;
 				inv.OHDmg += bonusStats.WeaponDmg;
@@ -67,21 +89,12 @@ namespace Arcanism.Patches
 			inv.IntScaleMod += (int)bonusStats.IntScaling;
 			inv.WisScaleMod += (int)bonusStats.WisScaling;
 			inv.ChaScaleMod += (int)bonusStats.ChaScaling;
-			inv.MitScaleMod += (float)((int)bonusStats.MitigationScaling);
+			inv.MitScaleMod += bonusStats.MitigationScaling;
 		}
 
-
-		static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+		static void Postfix(Inventory __instance)
         {
-            return new CodeMatcher(instructions)
-                .MatchStartForward(CodeInstruction.StoreField(typeof(Inventory), nameof(Inventory.ItemVR)))
-                .Advance(1)
-                .Insert(
-                    new CodeInstruction(OpCodes.Ldarg_0), // "this" as arg
-                    new CodeInstruction(OpCodes.Ldloc_1), // itemIcon
-                    CodeInstruction.Call(() => CheckSetBonus(default, default)) //CheckSetBonus(this, itemIcon)
-                )
-                .Instructions();
+			CheckSetBonus(__instance);
         }
     }
 }

@@ -4,7 +4,7 @@ using TMPro;
 using System.Collections;
 using System.Collections.Generic;
 using HarmonyLib;
-using Arcanism.SkillExtension;
+using Arcanism.Skills;
 
 namespace Arcanism.Patches
 {
@@ -24,8 +24,13 @@ namespace Arcanism.Patches
 
 
 			
-
-			if (txt.StartsWith("/arc.litem"))
+			if (txt.StartsWith("/arc.refresh"))
+            {
+				ItemDatabase_Start.UpdateItemDatabase(GameData.ItemDB);
+				UpdateSocialLog.LogAdd("Refreshed databases (just item DB for now, and won't work on new items)");
+				return false;
+            }
+			else if (txt.StartsWith("/arc.litem"))
 			{
 				if (lastItemEdit == null)
 				{
@@ -47,6 +52,22 @@ namespace Arcanism.Patches
 			var lowerTxt = txt.ToLower();
 
 			var stats = GameData.PlayerStats;
+			if (lowerTxt.StartsWith("/arc.additem"))
+            {
+				var tokens = lowerTxt.Split(' ');
+				string name = txt.Split('"')[1];
+				string lowerName = name.ToLower();
+				Item item = GameData.ItemDB.ItemDBList.Find(i => i.ItemName.ToLower().StartsWith(lowerName));
+				if (item == null)
+				{
+					UpdateSocialLog.LogAdd($"No item found with name '{name}'. Provide item name in quotation marks (case insensitive)");
+					return false;
+				}
+
+				GameData.PlayerInv.AddItemToInv(item);
+				UpdateSocialLog.LogAdd($"Added {name} to inventory.");
+				return false;
+			}
 			if (lowerTxt.StartsWith("/arc.items"))
             {
 				var tokens = lowerTxt.Split(' ');
@@ -62,9 +83,10 @@ namespace Arcanism.Patches
             {
 				Main.LoadSprites();
 				ItemDatabase_Start.RefreshSprites();
+				SkillDBStartPatch.RefreshSprites();
 				return false;
             }
-			else if (lowerTxt.StartsWith("/arc.item")) //    /arc.item Item_Name_With_Underscores_Not_Spaces (SettingType) (SettingValue)
+			else if (lowerTxt.StartsWith("/arc.item")) //  for changing item appearance.   /arc.item Item_Name_With_Underscores_Not_Spaces (SettingType) (SettingValue)
             {
 				var tokens = txt.Split(' ');
 				if (tokens.Length < 3)
@@ -84,10 +106,7 @@ namespace Arcanism.Patches
 				string newVal = tokens[3];
 				string lowerName = name.ToLower();
 				Item item = GameData.ItemDB.ItemDBList.Find(i => i.ItemName.ToLower().StartsWith(lowerName));
-				GameData.ItemDB.ItemDB.Do(i => {
-					if (i.ItemName.ToLower() == name) 
-						item = i; 
-				});
+
 				if (item == null)
                 {
 					UpdateSocialLog.LogAdd($"No item found with name '{name}'. Provide item name as first argument with spaces replaced by underscores (case insensitive)");

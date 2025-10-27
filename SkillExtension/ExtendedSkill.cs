@@ -22,10 +22,12 @@ namespace Arcanism
         protected virtual void Update()
         {
             var finished = IsFinished();
-            if (finished) TriggerCooldown();
+            if (finished)
+                TriggerCooldown(); // if you're finished you're finished, regardless of whether also interrupted.
 
             if (finished || IsInterrupted())
                 Destroy(this);
+                
         }
 
         /* Return a simple list of tuples where the first item of each is a Func testing a single viability condition for skill usage (and returning true if viable), 
@@ -91,11 +93,8 @@ namespace Arcanism
             ApplySkill(target);
 
             if (ShouldApplyCooldownOnUse())
-            {
-                if (caster.MySkills.isPlayer) Main.Log.LogInfo(skill.SkillName + " applying cooldown on use.");
                 TriggerCooldown();
-            }
-
+            
             return true;
         }
 
@@ -103,7 +102,6 @@ namespace Arcanism
         public virtual void TriggerCooldown()
         {
             if (coolingDown) return;
-
             caster.GetCooldownManager().AddCooldown(skill, CalculateCooldownFactor());
             coolingDown = true;
         }

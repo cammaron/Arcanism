@@ -3,8 +3,9 @@ using System;
 using System.Collections.Generic;
 using Arcanism.Patches;
 using HarmonyLib;
+using Arcanism.SkillExtension;
 
-namespace Arcanism.SkillExtension
+namespace Arcanism.Skills
 {
     class TwinSpell : ExtendedSkill, IRetargetingSkill, ISpellDamageModifier
     {
@@ -26,29 +27,27 @@ namespace Arcanism.SkillExtension
         public static void CreateExtension(Skill coreSkill)
         {
             ExtensionManager.AddExtension(coreSkill, (caster, vessel) => {
-                GameObject g = vessel?.gameObject;
-                if (g == null) g = caster.gameObject; // gdi, design issue. UseConditions dictate vessel must not be null... and don't get run until after appending to a vessel...
-                
-                var component = g.GetComponent<TwinSpell>();
+                var component = caster.gameObject.GetComponent<TwinSpell>();
                 if (component == null)
-                    component = g.AddComponent<TwinSpell>();
-                
-                component.skill = coreSkill;
-                component.caster = caster;
-                component.vessel = vessel;
-
-                if (vessel != null)
                 {
-                    var traversal = Traverse.Create(vessel);
-                    component.vesselTargetField = traversal.Field<Stats>("targ");
-                    component.originalSpellTarget = component.vesselTargetField.Value.Myself;
-                    component.allTargets.Add(component.originalSpellTarget);
-                }
+                    component = caster.gameObject.AddComponent<TwinSpell>();
+                    component.skill = coreSkill;
+                    component.caster = caster;
+                    component.vessel = vessel;
 
-                component.maxTargets = 1; // original target, plus one per skill v
-                if (caster.MySkills.KnowsSkill(SkillDBStartPatch.TWIN_SPELL_SKILL_ID)) component.maxTargets += 1;
-                if (caster.MySkills.KnowsSkill(SkillDBStartPatch.TWIN_SPELL_MASTERY_SKILL_ID)) component.maxTargets += 1;
-                if (caster.MySkills.KnowsSkill(SkillDBStartPatch.TWIN_SPELL_MASTERY_2_SKILL_ID)) component.maxTargets += 1;
+                    if (vessel != null)
+                    {
+                        var traversal = Traverse.Create(vessel);
+                        component.vesselTargetField = traversal.Field<Stats>("targ");
+                        component.originalSpellTarget = component.vesselTargetField.Value.Myself;
+                        component.allTargets.Add(component.originalSpellTarget);
+                    }
+
+                    component.maxTargets = 1; // original target, plus one per skill v
+                    if (caster.MySkills.KnowsSkill(SkillDBStartPatch.TWIN_SPELL_SKILL_ID)) component.maxTargets += 1;
+                    if (caster.MySkills.KnowsSkill(SkillDBStartPatch.TWIN_SPELL_MASTERY_SKILL_ID)) component.maxTargets += 1;
+                    if (caster.MySkills.KnowsSkill(SkillDBStartPatch.TWIN_SPELL_MASTERY_2_SKILL_ID)) component.maxTargets += 1;
+                }
 
                 return component;
             });
@@ -72,19 +71,20 @@ namespace Arcanism.SkillExtension
         {
             return new List<(Condition, string)>()
             {
-                ((caster, vessel, target) => caster.MySpells != null && vessel != null && caster.MySpells.isCasting(),            "You must be channeling a spell to use this skill."),
-                ((caster, vessel, target) => caster.MySpells.GetCurrentCast().Type == Spell.SpellType.Damage,                     "This skill only works on DAMAGE spells."),
-                ((caster, vessel, target) => target != null && target != caster,                                                  "Invalid target!"),
-                ((caster, vessel, target) => vessel.GetComponent<ControlChant>() == null,                                         "Cannot be used while controlling a chant."),
-                ((caster, vessel, target) => AllowSameTarget || !allTargets.Contains(target),                                     "Cannot be used on the same target twice."),
-                ((caster, vessel, target) => caster.MyStats.GetCurrentMana() - vessel.spell.ManaCost >= GetNextTargetManaCost(),  "You need more mana!"),
-                ((caster, vessel, target) => CanAddMoreTargets(),                                                                 "Unable to twin this spell any further.")
+                ((caster, vessel, target) => caster.MySpells != null && vessel != null && caster.MySpells.isCasting(),                          "You must be channeling a spell to use this skill."),
+                ((caster, vessel, target) => caster.MySpells.GetCurrentCast().Type == Spell.SpellType.Damage,                                   "This skill only works on DAMAGE spells."),
+                ((caster, vessel, target) => target != null && target != caster,                                                                "Invalid target!"),
+                ((caster, vessel, target) => caster.GetComponent<ControlChant>() == null,                                                       "Cannot be used while controlling a chant."),
+                ((caster, vessel, target) => AllowSameTarget || !allTargets.Contains(target),                                                   "Cannot be used on the same target twice."),
+                ((caster, vessel, target) => caster.MyStats.GetCurrentMana() - vessel.spell.ManaCost >= GetNextTargetManaCost(),                "You need more mana!"),
+                ((caster, vessel, target) => CanAddMoreTargets(),                                                                               "Unable to twin this spell any further."),
+                ((caster, vessel, target) => vessel.spell.SpellRange >= Vector3.Distance(caster.transform.position, target.transform.position), "Target is too far away!"),
             };
         }
 
         protected override bool ShouldApplyCooldownOnUse()
         {
-            return !CanAddMoreTargets();
+            return false; // return !CanAddMoreTargets(); -- actually let's stick w/ cooling down only on spell release, that way we can cancel cast without punishment aside from last mana.
         }
 
         protected override void ApplySkill(Character target)
@@ -108,9 +108,10 @@ namespace Arcanism.SkillExtension
             if (!hasAttacked) // This being called means SpellVessel is about to begin cycling targets. Whoever is already dead has died not by this spell's hand, so we process them for Vanishing Twin.
             {
                 npcsDiedWhileCasting = new HashSet<Character>(allTargets.FindAll(t => t == IsTargetDead(t)));
-
+                
                 if (caster.MySkills.KnowsSkill(SkillDBStartPatch.VANISHING_TWIN_SKILL_ID))
                     multi += npcsDiedWhileCasting.Count;
+
             }
 
             hasAttacked = true;
@@ -125,9 +126,9 @@ namespace Arcanism.SkillExtension
         public Character GetNextTarget()
         {
             var lastTarget = allTargets[currentTargetIndex];
-            
+
             // If the prior target is now dead, and wasn't already among those who died while waiting for cast, it means they were killed by Twin Spell, so proc Parasitic Twin
-            if (!appliedParasiticTwin && (IsTargetDead(lastTarget) && !npcsDiedWhileCasting.Contains(lastTarget))) 
+            if (!appliedParasiticTwin && IsTargetDead(lastTarget) && (npcsDiedWhileCasting == null || !npcsDiedWhileCasting.Contains(lastTarget)))
                 ApplyParasiticTwin();
 
             // If we've just processed the final target, it's time to trigger cooldown for the skill (if it hasn't already been done)
@@ -142,6 +143,7 @@ namespace Arcanism.SkillExtension
 
         private void ApplyParasiticTwin()
         {
+            UpdateSocialLog.CombatLogAdd("The dead target's soul saps the life of those connected to it by Twin Spell!");
             var parasiticTwinSpell = GameData.SpellDatabase.GetSpellByID(SpellDBStartPatch.PARASITIC_TWIN_SPELL_ID);
             // Parasitic Twin *has* no base target damage, thus all its damage is the "bonus damage" -- it's completely calculated by int/prof, scaling with character growth. With a max int around 353ish (before blessings) and max int prof, this will hit for 1700 base (*BASE*, as in, before other int/prof scaling increases it. so, same as damage listing on any spell desc)
             int baseDamage = Mathf.RoundToInt(caster.MyStats.GetCurrentInt() * 5 * (caster.MyStats.IntScaleMod / 40));
@@ -173,7 +175,7 @@ namespace Arcanism.SkillExtension
 
         private bool CanAddMoreTargets() => allTargets.Count < maxTargets;
 
-        private bool IsTargetDead(Character target) => target == null || !target.Alive; // it seems like NPCs are not destroyed, they just become dead bodies then respawn so in theory shouldn't null. Still...
+        private bool IsTargetDead(Character target) => target == null || target.IsDead(); // it seems like NPCs are not destroyed, they just become dead bodies then respawn so in theory shouldn't null. Still...
 
 
         protected override bool IsInterrupted() => vessel == null;

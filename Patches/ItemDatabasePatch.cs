@@ -77,6 +77,12 @@ namespace Arcanism.Patches
         CREST_OF_BRAXONIA = 12271853,
 
         // Weapons/Offhands
+        COPPER_SCEPTRE = 7308447,
+        WEAK_WAND = 58835400,
+        ADEPT_WAND = 32620720,
+        WAND_OF_AIR = 1624168,
+        EYESTALK_WAND = 55277254,
+        HARDENED_SCEPTRE = 41050704,
         ARGOS_GRIMOIRE = 39840084,
         MAGUS_SHIELD = 43055028,
         OGRESPICE_BUNDLE = 79500585,
@@ -177,6 +183,11 @@ namespace Arcanism.Patches
 
         static void Postfix(ItemDatabase __instance)
         {
+            UpdateItemDatabase(__instance);
+        }
+
+        public static void UpdateItemDatabase(ItemDatabase __instance)
+        {
             Main.Log.LogInfo("Adding and updating items for Arcanism.");
             var itemDictionary = Traverse.Create(__instance).Field<Dictionary<string, Item>>("itemDict").Value;
             var itemsToAdd = new List<Item>();
@@ -216,15 +227,17 @@ namespace Arcanism.Patches
             UpdateWeaponSlots(__instance, itemsToAdd);
             UpdateAuras(__instance, itemsToAdd);
 
+            itemsToAdd.RemoveAll(item => {
+                bool remove = itemDictionary.ContainsKey(item.Id);
+                if (remove) Main.Log.LogInfo($"Skipping adding item {item.ItemName} because an item with ID {item.Id} already exists: {itemDictionary[item.Id].ItemName}");
+                return remove;
+            });
+
             int oldItemDbLength = __instance.ItemDB.Length;
             System.Array.Resize(ref __instance.ItemDB, __instance.ItemDB.Length + itemsToAdd.Count);
             for (var i = 0; i < itemsToAdd.Count; i++)
             {
                 var item = itemsToAdd[i];
-
-                if (itemDictionary.ContainsKey(item.Id))
-                    throw new System.Exception($"Unable to add item {item.ItemName} as item with ID {item.Id} already exists: {itemDictionary[item.Id].ItemName}");
-
                 __instance.ItemDB[oldItemDbLength + i] = item;
                 itemDictionary.Add(item.Id, item);
                 Main.Log.LogInfo($"New item added to database: {item.ItemName}");
@@ -277,6 +290,7 @@ namespace Arcanism.Patches
             public Color? WandBoltColour;
             public float? WandBoltSpeed;
             public AudioClip WandAttackSound;
+            public float? WandProcChance;
 
             public int? Damage;
             public float? AttackDelay;
@@ -298,6 +312,17 @@ namespace Arcanism.Patches
             public Spell WandEffect;
 
             public float? SpellCastTime;
+
+            public EquipmentGenerator TuneWand(int damage, float attackDelay, int range, string spellId = null, float procChance = 0) // juuuust an extra lil helper to make doing another pass over all the wands less annoying
+            {
+                this.Damage = damage;
+                this.IsWand = true;
+                this.WandRange = range;
+                this.AttackDelay = attackDelay;
+                if (spellId != null) WandEffect = GameData.SpellDatabase.GetSpellByID(spellId);
+                if (procChance > 0) WandProcChance = procChance;
+                return this;
+            }
 
             public Item Generate(ItemDatabase db)
             {
@@ -340,6 +365,7 @@ namespace Arcanism.Patches
                 if (WandBoltSpeed.HasValue) item.WandBoltSpeed = WandBoltSpeed.Value;
                 if (WandRange.HasValue) item.WandRange = WandRange.Value;
                 if (WandAttackSound != null) item.WandAttackSound = WandAttackSound;
+                if (WandProcChance.HasValue) item.WandProcChance = WandProcChance.Value;
 
                 if (Damage.HasValue) item.WeaponDmg = Damage.Value;
                 if (AttackDelay.HasValue) item.WeaponDly = AttackDelay.Value;
@@ -389,7 +415,7 @@ namespace Arcanism.Patches
                 if (ClickEffect != null) item.ItemEffectOnClick = ClickEffect;
                 if (WandEffect != null) item.WandEffect = WandEffect;
 
-                if (SpellCastTime.HasValue) item.SpellCastTime = SpellCastTime.Value;
+                if (SpellCastTime.HasValue) item.SpellCastTime = SpellCastTime.Value * 60f;
 
                 if (CreateFromBaseId.HasValue)
                     Main.Log.LogInfo($"Item created: {Name}");
@@ -398,6 +424,8 @@ namespace Arcanism.Patches
 
                 return item;
             }
+
+
         }
 
         private static Item SoldBy(NpcName npcName, Item item)
@@ -596,10 +624,16 @@ namespace Arcanism.Patches
 
         static void UpdateWeaponSlots(ItemDatabase __instance, List<Item> itemsToAdd)
         {
+            new EquipmentGenerator { Id = ItemId.WEAK_WAND }.TuneWand(7, 1, 10).Generate(__instance); // Competing with: Ice Bolt: 19 damage
+            new EquipmentGenerator { Id = ItemId.COPPER_SCEPTRE }.TuneWand(24, 2, 25).Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.ADEPT_WAND }.TuneWand(22, 1, 18).Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.WAND_OF_AIR }.TuneWand(29, 1, 18, SpellDBStartPatch.JOLT_SPELL_ID, 10).Generate(__instance); // Competing with: Jolt: 200
+            new EquipmentGenerator { Id = ItemId.HARDENED_SCEPTRE }.TuneWand(80, 2, 25).Generate(__instance); 
+            new EquipmentGenerator { Id = ItemId.EYESTALK_WAND }.TuneWand(65, 2, 7, null, 25).Generate(__instance); 
+
             new EquipmentGenerator { Id = ItemId.ARGOS_GRIMOIRE, HP = 0, Mana = 60, AC = 0, Int = 8, Wis = 7, Cha = 2, Res = 1 }.Generate(__instance);
             new EquipmentGenerator { Id = ItemId.MAGUS_SHIELD, HP = 40, Mana = 18, AC = 25, Int = 4, Wis = 4, Cha = 6, Res = 1 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.OGRESPICE_BUNDLE, HP = 45, Mana = 0, AC = 0, Int = 7, Wis = 0, Cha = 6, Res = 0 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.SPECTRAL_SCEPTRE, HP = 0, Mana = 45, AC = 0, End = 2, Dex = 0, Int = 10, Wis = 5, Cha = 7, Res = 1 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.OGRESPICE_BUNDLE, HP = 45, Mana = 0, AC = 0, Int = 7, Wis = 0, Cha = 6, Res = 0 }.TuneWand(80, 3, 18, null, 50).Generate(__instance); // fitty percent chance to cast sleep, decent range, but slower than vanilla, and not a good DPS option
 
             // Here's an interesting one -- by default this does no damage and is a 1 hander. Let's change it to be a 2 hander with no damage, completely disabling regular attacks, but with good stats to buff casting.
             // NB It competes with Diamondine/Royal Carapace + weapons from Spectral Sceptre to Scorched W Stick
@@ -612,7 +646,8 @@ namespace Arcanism.Patches
             // it's a close range weapon with chance to cast Brax's Rage which is a relatively poweful medium spell now, so it's a fantastic item for this level
             // Let's make it interesting by giving it a high damage, low frequency attack -- encouraging a meta of darting in to hit and retreating
             // Icnreasing Brax's Rage proc chance a lot to account for the lower attack speed. This will make it feel really heavy whenever it procs!
-            new EquipmentGenerator { Id = ItemId.CINDER_OF_BIRTH, Damage = 12 * 3, AttackDelay = 3, HP = 30, Mana = 30, Int = 4, Wis = 12, Cha = 4, Res = 1 }.Generate(__instance).WeaponProcChance = 35;
+            new EquipmentGenerator { Id = ItemId.CINDER_OF_BIRTH, HP = 30, Mana = 30, Int = 4, Wis = 12, Cha = 4, Res = 1,  // Competing with: Ice Shock 360, Ice Spear 1920
+                WandBoltSpeed = 5, WandBoltColour = new Color32(255, 108, 0, 255)}.TuneWand(360, 3, 5, null, 45).Generate(__instance);
 
 
             // the next 3 are all about teh same level drops
@@ -620,54 +655,70 @@ namespace Arcanism.Patches
             // Make Scorched Walking Stick into an interesting 2 hander with early access to Brax's Fury but with a longer cast time, which does similar damage to current level's heavy spell (Winter's Bite) but now faster
             // Boneweaver's gets nerfs relative to peers but higher raw wand DPS, and the benefit of its amazing DoT
             // So now, there's actually interesting choices at this level!
-            new EquipmentGenerator { Id = ItemId.BLACKFLAME_TORCH,       Damage = 6, AttackDelay = 1,   HP = 0, Mana = 90, Int = 17, Wis = 5, Cha = 13, Res = 3 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.BLACKFLAME_TORCH,       Damage = 6, AttackDelay = 1,   HP = 0, Mana = 90, Int = 17, Wis = 5, Cha = 13, Res = 3 }.TuneWand(180, 2, 25).Generate(__instance);
             new EquipmentGenerator { Id = ItemId.SCORCHED_WALKING_STICK, ClickEffect = GameData.SpellDatabase.GetSpellByID(SpellDBStartPatch.BRAXS_FURY_SPELL_ID),    SpellCastTime = 3.2f,
                     HP = 60, Mana = 100, AC = 14, End = 7, Int = 20, Wis = 30, Cha = 6, Res = 4, SlotType = Item.SlotType.Primary, WeaponType = Item.WeaponType.TwoHandStaff }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.BONEWEAVERS_LEG,        Damage = 18, AttackDelay = 1,   HP = 25,  Mana = 60, AC = 0, End = 0, Int = 12, Wis = 8, Cha = 3, Res = 2 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.BONEWEAVERS_LEG,  HP = 25,  Mana = 60, AC = 0, End = 0, Int = 12, Wis = 8, Cha = 3, Res = 2 }.TuneWand(140, 1, 18).Generate(__instance);
 
-            // Shivering Step drop, requires going out of your way, needs to be worth it. Casts Mithril Shards (400 magic) at 5% chance in vanilla, but 2s attack delay makes it uninteresting.
-            // Let's make it similar in stats to Blackflame -- noting this item is 4 lvls higher -- and very low raw DPS, but higher chance to proc and faster attack
-            new EquipmentGenerator { Id = ItemId.DREAMY_WAND, Damage = 1, AttackDelay = 1, HP = 0, Mana = 120, AC = 0, Int = 16, Wis = 5, Cha = 12, Res = 3 }.Generate(__instance).WeaponProcChance = 8;
+            // Shivering Step drop, requires going out of your way, needs to be worth it. In Vanilla, casts Mithril Shards (400 magic) at 5% chance per 2 seconds
+            // I'm making it similar in stats to Blackflame -- noting this item is 4 lvls higher -- but with extremely low raw DPS,
+            // and making it interesting by buffing Mithril Shards a lot and giving this a higher proc chance, so it's an all-or-nothing gamble weapon
+            // NB with mithril shards @ 1400 dmg and 18% chance to proc per second, this does about 252 dps *on average*
+            new EquipmentGenerator { Id = ItemId.DREAMY_WAND, Damage = 1, AttackDelay = 1, HP = 0, Mana = 120, AC = 0, Int = 16, Wis = 5, Cha = 12, Res = 3 }.TuneWand(1, 1, 25, null, 18).Generate(__instance);
 
             // Here's an interesting idea. Cryst. Tactics + Celestial Spike are similar lvl and as a combo they're *aesthetic* and feel very magical. Sounds like it's time to design a set bonus system!
-            var crystallisedTactics = new EquipmentGenerator { Id = ItemId.CRYSTALLISED_TACTICS, HP = 65, Mana = 120, AC = 15, Int = 15, Wis = 17, Cha = 4, Res = 2,
+            // Note Cryst. Tactics is *not a weapon* so the set involves zero weapon dps and needs good stats to balance that out.
+            var crystallisedTactics = new EquipmentGenerator { Id = ItemId.CRYSTALLISED_TACTICS, HP = 150, Mana = 120, AC = 20, Int = 19, Wis = 19, Cha = 6, Res = 2,
                 Lore = "Carried by the warriors of Vitheo, its energies are said to give an edge in battle... But its glow is dull without the Celestial Spike by its side."
             }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.SIVAKAYAN_SCEPTRE, Damage = 37, AttackDelay = 1.5f, HP = 50, Mana = 50, AC = 0, Int = 23, Wis = 0, Cha = 8, Res = 3 }.Generate(__instance);
+            
+            // wands now compete with Brax's Fury (1300 dps)
+            
             new EquipmentGenerator { Id = ItemId.CELESTIAL_SPIKE, HP = 150, Mana = 150, AC = 22, End = 10, Int = 16, Wis = 5, Cha = 10, Res = 1,
                 Lore = "This unique item's true power is only unlocked when equipped alongside other crystals or enchanted stones, when its celestial facets send powerful fractal ripples, intensifying their glow two-fold."
             }.Generate(__instance);
 
             // Mem. of Snow = ice version of Cinder of Birth! But higher level, and with more stat sacrifices,  but a much more powerful spell attached.
             // Again, keep in mind this is a close range weapon... needs to have good damage to be worth getting up close to use.
-            new EquipmentGenerator { Id = ItemId.MEMORIES_OF_SNOW, Damage = 12 * 4, AttackDelay = 4f, HP = 0, Mana = 0, AC = 0, Int = 0, Wis = 20, Cha = 0, Res = 2 }.Generate(__instance).WeaponProcChance = 42;
-            
-            // for volc sceptre, don't change regular damage, but upgrade the spell to Brax's Fury so it's much stronger. Balanced against Mem of Snow, it's got a lot lower chance to proc, 
+            // Ice Spear 1920 dmg 42%/3 secs=extra 268 DPS avg, or 350+268=618 dps!!
+            new EquipmentGenerator { Id = ItemId.MEMORIES_OF_SNOW, HP = 0, Mana = 0, AC = 0, Int = 0, Wis = 20, Cha = 0, Res = 2,
+                WandBoltSpeed = 5, WandBoltColour = new Color32(134, 244, 255, 255)}.TuneWand(1050, 3, 5, null, 42).Generate(__instance);
+
+            // Upgrading Volc Sceptre's spell to Brax's Fury so it's much stronger. Balanced against Mem of Snow, it's got a lot lower chance to proc, 
             // but has better stats in general, and is also a RANGED weapon, making its chance to proc at all much more valuable
-            new EquipmentGenerator { Id = ItemId.VOLCANIC_SCEPTRE, HP = 180, Mana = 30, AC = 15, Int = 0, Wis = 6, Cha = 20, Res = 2, 
-                WandEffect = GameData.SpellDatabase.GetSpellByID(SpellDBStartPatch.BRAXS_RAGE_SPELL_ID) 
-            }.Generate(__instance).WandProcChance = 5;
+            // DPS goal: 320 (so mem of snow is 50% stronger, but requires close range and slow/frustrating)
+            // so Brax Fury 1300 dmg 20%/s = 260 dps, make weapon 60 dps
+            new EquipmentGenerator { Id = ItemId.VOLCANIC_SCEPTRE, HP = 180, Mana = 30, AC = 15, Int = 5, Wis = 6, Cha = 20, Res = 2,}.TuneWand(60, 1, 25, SpellDBStartPatch.BRAXS_FURY_SPELL_ID, 20).Generate(__instance);
 
             // changing res crystal to be a wand type instead of melee, got enough of those, and doesn't... *look* like a melee weapon.
-            // Stats once paired in set are "all 'round good" but not stand-out amazing -- what makes it special is its atk speed halves, dmg doubles, so it ends up shooting pretty powerful projectiles
-            var resonatingCrystal = new EquipmentGenerator { Id = ItemId.RESONATING_CRYSTAL, Damage = 14, AttackDelay = 2f, HP = 150, Mana = 150, AC = 12, Int = 13, Wis = 13, Cha = 13, Res = 3, 
-                IsWand = true, WandRange = 15, WandBoltSpeed = 18, WandBoltColour = (Color) new Color32(252, 136, 255, 255),
+            // Stats once paired in set are "all 'round good" but not stand-out amazing -- what makes it special is its atk speed halves, dmg doubles, so it ends up *powerful* as a wand in set
+            // make it feel like the plasma gun from Doom! 460 DPS in set seems like a good point to get to
+            var resonatingCrystal = new EquipmentGenerator { Id = ItemId.RESONATING_CRYSTAL, HP = 150, Mana = 150, AC = 12, Int = 13, Wis = 13, Cha = 13, Res = 3, 
+                WandBoltSpeed = 3, WandBoltColour = (Color) new Color32(252, 136, 255, 255),
                 WandAttackSound = GameData.SpellDatabase.GetSpellByID(SpellDBStartPatch.HARDENED_SKIN_SPELL_ID).ChargeSound,
-                Lore = "Sounds reverberate oddly through this crystal, coming out the other side louder and more vibrant. Its color is dull, however, as though it's missing something..."
-            }.Generate(__instance);
+                Lore = "Sounds reverberate oddly through this crystal. Its color is dull, however, as though it's missing something..."
+            }.TuneWand(115, 1, 15).Generate(__instance);
 
-            // despite being a lowish item level, Siva Wand actually drops from 27-28 enemies, so tune accordingly. I'm increasing its item level to match to prevent showing up in AH early.
-            new EquipmentGenerator { Id = ItemId.SIVAKAYAN_WAND, Level = 26, HP = 100, Mana = 100, AC = 0, Int = 30, Wis = 0, Cha = 12, Res = 3 }.Generate(__instance).WandProcChance = 8;
+            // despite being a lowish item level, Siva Sceptre actually drops from 27-28 enemies, making it actually a very similar drop to Siva Wand. 
+            // So to differentiate them, make Siva Sceptre a slow hard hitting non-proc weapon w/ good base stats (250 dps)
+            // And Siva Wand somewhere between that and Volc Sceptre -- better stats and raw dps, less proc chance/dmg (290 dps)
+            // With a spell proc and similar level  this would be too similar to Volc Sceptre, so make it stronger raw dps, slower, better stats, but fewer procs
+            // DPS goal: 290 (focus pain = 1500 dmg @ 10% = 150 so 140 base dps)
+            new EquipmentGenerator { Id = ItemId.SIVAKAYAN_SCEPTRE, Level = 26, HP = 100, Mana = 100, AC = 8, End = 8, Int = 28, Wis = 12, Cha = 7, Res = 3 }.TuneWand(500, 2, 25).Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.SIVAKAYAN_WAND, HP = 20, Mana = 80, AC = 0, Int = 23, Wis = 2, Cha = 14, Res = 2 }.TuneWand(140, 1, 18, null, 10).Generate(__instance);
             // Runed Shield = lots of extra defense, sacrificing int
-            new EquipmentGenerator { Id = ItemId.RUNED_SHIELD, HP = 300, Mana = 60, AC = 100, End = 15, Int = 0, Wis = 12, Cha = 16, Res = 2 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.RUNED_SHIELD, HP = 300, Mana = 60, AC = 100, End = 15, Int = 0, Wis = 12, Cha = 16, Res = 2 }.Generate(__instance); 
 
             // Vanilla Brax's Candle just seems like... a worse Volcanic Sceptre that you unlock later. I'm removing its chance to prox Brax's Rage on hit, and instead giving it an activatable cast of something.
             // Also going to buff it and make it part of a set with the Brax Testament... after all, these two surely belong together, and Brax-themed gear is also extremely wizardly!
 
+            //  Spectral Sceptre is an odd one -- low level and unremarkable at that, but dropped from a high end enemy. To play into its spectral nature I'm making it to high damage but with nil stats except res
+            new EquipmentGenerator { Id = ItemId.SPECTRAL_SCEPTRE, Level = 29, HP = 0, Mana = 0, AC = 0, End = 0, Dex = 0, Int = 0, Wis = 0, Cha = 0, Res = 4 }.TuneWand(400, 1, 25).Generate(__instance);
+
             var braxsCandle = new EquipmentGenerator { Id = ItemId.BRAXS_CANDLE, HP = 25, Mana = 25, End = 6, Int = 0, Wis = 16, Cha = 0, Res = 0, 
                 ClickEffect = GameData.SpellDatabase.GetSpellByID(SpellDBStartPatch.DESERT_COFFIN_SPELL_ID),    SpellCastTime = 6f,
                 Lore = "A large, ancient wand once wielded by a Braxonian High Priest. Only the incantation in the Braxonian Testament may awaken its power.",
-            }.Generate(__instance);
+            }.TuneWand(150, 1, 20).Generate(__instance);
             braxsCandle.WandEffect = null;
             braxsCandle.WandProcChance = 0;
 
@@ -677,9 +728,11 @@ namespace Arcanism.Patches
             // The glowing blue stone, once paired with the Celestial Spike, is marginally more defensive than the SivaBrax set, and with 1 point higher res, but lower int/wis/cha, and obv lacking the Desert Tempest spell.
             // However, SivaBrax teachings are only obtained via a quest, therefore can't be dropped as rares etc. from the Loot Rarity mod -- making the glowing blue stone a solid endgame option if you manage a good drop!
             // How's that for a reason to go back to Fernella's and kill those spectres that whooped our arses earlier? ;)
+            // DPS Goal: similar to resonating crystal, slightly stronger dps, but mainly an upgrade because it's got good stats
             var glowingBlueStone = new EquipmentGenerator { Id = ItemId.GLOWING_BLUE_STONE, HP = 450, Mana = 210, AC = 35, Int = 21, Wis = 10, Cha = 13, Res = 5,
+                 WandBoltSpeed = 5, WandBoltColour = new Color32(255, 108, 0, 255),
                 Lore = "You've never seen the color blue look so vivid... But is there something that could make it brighter still?",
-            }.Generate(__instance);
+            }.TuneWand(150, 1, 15).Generate(__instance);
             new EquipmentGenerator { Id = ItemId.SIVA_BRAXONIAN_TEACHINGS, HP = 155, Mana = 155, AC = 6, Int = 0, Wis = 25, Cha = 5, Res = 0,
                 Lore = "Wait... This contradicts the Braxonian Testament! It changes EVERYTHING about the Candle -- and reveals its TRUE power!"
             }.Generate(__instance);
@@ -693,37 +746,40 @@ namespace Arcanism.Patches
             // So, this will be balanced to be an "early endgame item" that will be outclassed by the other items if you manage to get good drops on both the 1h+offhand.
             new EquipmentGenerator { Id = ItemId.PETRIFIED_WOOD_CANE, HP = 650, Mana = 800, AC = 40, End = 13, Int = 55, Wis = 30, Cha = 45, Res = 10,
                 WeaponType = Item.WeaponType.TwoHandStaff, SlotType = Item.SlotType.Primary,
-            }.Generate(__instance);
+                WandBoltSpeed = 15, WandBoltColour = new Color32(133, 86, 67, 255)
+            }.TuneWand(900, 3, 12).Generate(__instance);
 
 
             // Garg wand's role: previously it was BiS just based on it having 5 res, without much else going for it. Now I'm making it a mixed bag with a couple of great stats and the rest avg/0,
             // still 5 res which isn't as big as it used to be now that lots of item combos can give you 8-11ish,
             // and swapping out Magic Missile on hit for... INFERNIS! So a big advantage of using Garg is you can keep Infernis up on enemies without wasting mana/time to cast.
             // but if you don't mind doing that yourself anyway, maybe this isn't the weapon for you any more...
-            new EquipmentGenerator { Id = ItemId.GARG_WAND, HP = 50, Mana = 200, Int = 35, Wis = 18, Cha = 0, Res = 5,
-                WandEffect = GameData.SpellDatabase.GetSpellByID(SpellDBStartPatch.INFERNIS_SPELL_ID)
-            }.Generate(__instance).WandProcChance = 30;
+            // 380 DPS -- solid for endgame, but not extraordinary. 
+            new EquipmentGenerator { Id = ItemId.GARG_WAND, HP = 50, Mana = 200, Int = 35, Wis = 18, Cha = 0, Res = 5 }.TuneWand(760, 2, 25, SpellDBStartPatch.INFERNIS_SPELL_ID, 30).Generate(__instance);
 
             // Endgame viable defensive offhander with int, wis and res
             new EquipmentGenerator { Id = ItemId.ULORS_ENCYCLOPEDIA, HP = 500, Mana = 200, AC = 40, End = 20, Int = 30, Wis = 22, Cha = 0, Res = 5 }.Generate(__instance);
 
-            // Ehhh... Le'ts make this a very wis and cha focused mildly defensive off-hander, for some choice around which stats to prioritise
-            new EquipmentGenerator { Id = ItemId.ASCENDED_REMAINS, HP = 250, Mana = 500, AC = 25, End = 10, Int = 6, Wis = 36, Cha = 21, Res = 5 }.Generate(__instance);
+            // A semi defensive off-hander with a wis focus (less useful) and less stats overall, but with 1 higher res. So, a difficult compromise.
+            new EquipmentGenerator { Id = ItemId.ASCENDED_REMAINS, HP = 250, Mana = 400, AC = 20, End = 10, Int = 4, Wis = 30, Cha = 15, Res = 6 }.Generate(__instance);
 
             // At last we come to you! When did I start writing comments for every item? *I DON'T KNOW!* But it's a thing now! I'm probably losing my mind!
             // I've tweaked way, way too many items! I don't know what I'm doing any more! LET'S GOOO!
             // This guy is already a motherfucking powerhouse in vanilla, and I still want to keep it like that -- a fantastic reward for beating Astra,
             // The effort involved in summoning+beating Astra -- and then only 20% drop chance -- means this is probably one of the harder items to get a rare etc. drop of.
             // So, having great stats out of the gate doesn't necessarily make it OP -- its base is competing with other items that have dropped twice as strong.
-            // BUT, dropping Aetherstorm proc chance a little -- Aetherstorm does almost 50% more damage in Arcanism, after all.
-            new EquipmentGenerator { Id = ItemId.SINGULARITY_VESSEL_OF_CREATION, HP = 700, Mana = 400, AC = 100, Int = 40, Wis = 14, Cha = 34, Res = 6 }.Generate(__instance).WandProcChance = 10;
+            // However, rebalancing it a bit. Same HP/Mana, dropping AC from 100, and buffing other stats
+            // DPS Goal: 480~ average. Aetherstorm = 2880 dmg, 10% chance/sec = 288, so add 190~ raw dps
+            // On paper this might not look as strong as garg, which I think makes it interesting now. Great stats, hard to pass up, less consistent damage, but ACTUALLY higher DPS on average overall.
+            // That's before taking into account that Aetherstorm proc can *resonate*, increasing that damage by a decent margin in endgame (maybe 620ish avg DPS total)
+            new EquipmentGenerator { Id = ItemId.SINGULARITY_VESSEL_OF_CREATION, HP = 500, Mana = 355, AC = 40, Int = 40, Wis = 14, Cha = 34, Res = 6 }.TuneWand(190, 1, 25, null, 10).Generate(__instance);
 
 
             // because it's actually a weapon for attacking, we don't actually want to DOUBLE its delay
             // instead, we'll make the main boon of it the way everythign doubles -- twice as much damage, and twice as fast, so a 4x damage boost -- making it similar in strength to the melee weapons, but at range!
             // therefore, make the set bonus *subtract* half the existing weapon delay
             resonatingCrystal = GameObject.Instantiate(resonatingCrystal);
-            resonatingCrystal.WeaponDly = -resonatingCrystal.WeaponDly * .5f; ; 
+            resonatingCrystal.WeaponDly = -resonatingCrystal.WeaponDly * .5f;
             setBonusesByItemId.Add(ItemId.CELESTIAL_SPIKE, new Dictionary<ItemId, Item>() {
                 { ItemId.CRYSTALLISED_TACTICS, crystallisedTactics },
                 { ItemId.RESONATING_CRYSTAL, resonatingCrystal },
@@ -731,7 +787,7 @@ namespace Arcanism.Patches
             });
 
             var braxBraxBonus = ScriptableObject.CreateInstance<Item>();
-            braxBraxBonus.SpellCastTime = -(braxsCandle.SpellCastTime * 0.25f);
+            braxBraxBonus.SpellCastTime = (-(braxsCandle.SpellCastTime * 0.25f)) * 60f;
             braxBraxBonus.HP = 350;
             braxBraxBonus.Mana = 250;
             braxBraxBonus.AC = 15;
@@ -740,17 +796,19 @@ namespace Arcanism.Patches
             braxBraxBonus.Wis = 18;
             braxBraxBonus.Cha = 22;
             braxBraxBonus.Res = 7;
+            braxBraxBonus.WeaponDmg = 360 - braxsCandle.WeaponDmg;  // just subtracting so i can easily set the SET base dmg without worrying about changes to og weapon base dmg. in 1st set, nearly as strong as spectral sceptre, but with stats!
 
             var braxSivaBonus = ScriptableObject.CreateInstance<Item>();
-            braxBraxBonus.SpellCastTime = -(braxsCandle.SpellCastTime * 0.5f);
-            braxBraxBonus.HP = 700;
-            braxBraxBonus.Mana = 400;
-            braxBraxBonus.AC = 50;
-            braxBraxBonus.End = 20;
-            braxBraxBonus.Int = 55;
-            braxBraxBonus.Wis = 26;
-            braxBraxBonus.Cha = 35;
-            braxBraxBonus.Res = 9;
+            braxSivaBonus.SpellCastTime = (-(braxsCandle.SpellCastTime * 0.5f)) * 60f;
+            braxSivaBonus.HP = 700;
+            braxSivaBonus.Mana = 400;
+            braxSivaBonus.AC = 50;
+            braxSivaBonus.End = 20;
+            braxSivaBonus.Int = 55;
+            braxSivaBonus.Wis = 26;
+            braxSivaBonus.Cha = 35;
+            braxSivaBonus.Res = 9;
+            braxSivaBonus.WeaponDmg = 460 - braxsCandle.WeaponDmg;
 
             // Sets are very powerful, but these stats DON'T benefit from blessing or rarity!
             setBonusesByItemId.Add(ItemId.BRAXS_CANDLE, new Dictionary<ItemId, Item>() {

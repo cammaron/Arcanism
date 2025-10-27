@@ -67,7 +67,7 @@ namespace Arcanism.Patches
 
         static bool Prefix(SpellVessel __instance, CastSpell ___SpellSource, ref float ___scaleDmg)
         {
-            var damageModifier = __instance.GetComponent<ISpellDamageModifier>();
+            var damageModifier = ___SpellSource.MyChar.GetComponent<ISpellDamageModifier>();
             if (damageModifier != null)
                 ___scaleDmg = damageModifier.GetSpellDamageMulti();
             
@@ -104,7 +104,7 @@ namespace Arcanism.Patches
         {
             return CalculateSpellDamage(source.MyChar, baseDamage, resonating);
         }
-        public static int CalculateSpellDamage(Character source, int baseDamage, bool resonating)
+        public static int CalculateSpellDamage(Character source, int baseDamage, bool resonating, bool includeFlatAddition = true)
         {
             float fullDamage = baseDamage;
             if (resonating)
@@ -139,9 +139,14 @@ namespace Arcanism.Patches
             // Have done another pass balancing all spells to get their damage consistent with new formula
             float effectiveProficiency = proficiency * (1 + level / 5f) * 2.5f;
             float effectiveInt = intelligence * 0.14f * (1 + (effectiveProficiency / 100));
-            float intAddition = intelligence * .3f; // Go for a tiiiiiiiny bit of additive damage from int, to help with low level chars scaling their weak spells, as it makes the most significant difference there
-            fullDamage *= (1 + effectiveInt / 100f);
-            fullDamage += intAddition;
+            fullDamage *= (1 + effectiveInt / 100f); 
+            
+            if (includeFlatAddition)
+            {
+                float intAddition = intelligence * .3f; // Go for a tiiiiiiiny bit of additive damage from int, to help with low level chars scaling their weak spells, as it makes the most significant difference there
+                fullDamage += intAddition;
+            }
+            
             return Mathf.RoundToInt(fullDamage);
         }
 
@@ -164,7 +169,7 @@ namespace Arcanism.Patches
     {
         static bool Prefix(SpellVessel __instance, CastSpell ___SpellSource, ref Stats ___targ, ref float ___CDMult)
         {
-            var nextTarget = __instance.GetComponent<IRetargetingSkill>()?.GetNextTarget();
+            var nextTarget = ___SpellSource.MyChar.GetComponent<IRetargetingSkill>()?.GetNextTarget();
             if (nextTarget != null) /* If an IRetargetingSkill was used and there are still more targets, cancel EndSpell, update target, resolve again 'til no targets left */
             {
                 ___targ = nextTarget.MyStats;
@@ -173,9 +178,9 @@ namespace Arcanism.Patches
             }
 
             // There are instances in which we end up in EndSpell now without going through ResolveSpell, so the state clean-up -- removing the cast bar -- should happen here.
-            if (___SpellSource.MyChar.MySkills.isPlayer) GameData.CB.CloseBar(); 
+            if (___SpellSource.MyChar.MySkills.isPlayer) GameData.CB.CloseBar();
 
-            var cdModifier = __instance.GetComponent<ISpellCooldownModifier>();
+            var cdModifier = ___SpellSource.MyChar.GetComponent<ISpellCooldownModifier>();
             if (cdModifier != null)
                 ___CDMult = cdModifier.GetSpellCooldownMulti();
 

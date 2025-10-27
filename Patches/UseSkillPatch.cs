@@ -15,7 +15,7 @@ namespace Arcanism.Patches
         {
 			Character myself = ___MyStats.Myself;
 			CastSpell mySpells = myself?.MySpells;
-			if (__instance.isPlayer) Main.Log.LogInfo("UseSkill: Prefix for " + _skill.SkillName + ". Cooldown for skill is: " + myself.GetCooldownManager().GetCooldown(_skill));
+			
 			if (myself.GetCooldownManager().GetCooldown(_skill) > 0) return false; // Previously, whether a skill could be used was solely the domain of the hotkey itself. 
 
 			SpellVessel vessel = null;

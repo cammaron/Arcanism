@@ -2,7 +2,7 @@
 using UnityEngine;
 using HarmonyLib;
 using System.Collections.Generic;
-using Arcanism.SkillExtension;
+using Arcanism.Skills;
 
 namespace Arcanism.Patches
 {
@@ -58,7 +58,7 @@ namespace Arcanism.Patches
 		static void AddSkills(SkillDB __instance)
         {
 			var controlChant = __instance.GetSkillByID(CONTROL_CHANT_SKILL_ID);
-			controlChant.Cooldown = 8f * 60f; // 60ths of seconds :/
+			controlChant.Cooldown = 10f * 60f; // 60ths of seconds :/
 			controlChant.SkillDesc = "Activate any time during the channeling of a DAMAGE SPELL to control your chant. Activate again to immediately end the spell. The earlier you release your spell, the less mana and cooldown time, but the greater the risk of losing control. Conversely, chanting for LONGER than normal greatly increases the mana cost and cooldown, but also the spell's power.";
 			ControlChant.CreateExtension(controlChant); 
 			Main.Log.LogInfo($"Skill updated: {controlChant.SkillName}");
@@ -104,8 +104,20 @@ namespace Arcanism.Patches
 			}
 
 			__instance.SkillDatabase = __instance.SkillDatabase.AddRangeToArray(skillsToAdd.ToArray());
+			RefreshSprites(__instance);
 			Main.Log.LogInfo($"Added {skillsToAdd.Count} skills.");
 		}
+
+		public static void RefreshSprites(SkillDB skillDb = null)
+		{
+			if (skillDb == null) skillDb= GameData.SkillDatabase;
+			foreach (var entry in Main.skillSpriteById)
+			{
+				skillDb.GetSkillByID(entry.Key).SkillIcon = entry.Value;
+			}
+			Main.Log.LogInfo($"Updated graphics for {Main.itemSpriteById.Count} items");
+		}
+
 		static void AddAscensions(SkillDB __instance)
 		{
 			var baseAsc = __instance.GetAscensionByID(COOLDOWN_REDUCTION_ASCENSION_ID);

@@ -10,6 +10,7 @@ using System;
 using System.Linq;
 using UnityEngine.SceneManagement;
 using Arcanism.Patches;
+using Arcanism.Skills;
 
 namespace Arcanism
 {
@@ -22,6 +23,9 @@ namespace Arcanism
 
         internal static ManualLogSource Log;
         internal static Dictionary<string, Sprite> itemSpriteById;
+        internal static Dictionary<string, Sprite> skillSpriteById;
+
+        Harmony harmonyPatcher;
 
         public void Awake()
         {
@@ -30,7 +34,13 @@ namespace Arcanism
             Logger.LogInfo("Initialising.");
 
             LoadSprites();
-            new Harmony(PLUGIN_GUID).PatchAll();
+            harmonyPatcher = new Harmony(PLUGIN_GUID);
+            harmonyPatcher.PatchAll();
+
+            if (GameData.SkillDatabase != null && GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.CONTROL_CHANT_SKILL_ID) != null)
+                ControlChant.CreateExtension(GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.CONTROL_CHANT_SKILL_ID));
+            if (GameData.SkillDatabase != null && GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.TWIN_SPELL_SKILL_ID) != null)
+                TwinSpell.CreateExtension(GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.TWIN_SPELL_SKILL_ID));
         }
 
 #if DEBUG
@@ -48,10 +58,26 @@ namespace Arcanism
             }
         }
 #endif
+        void OnDestroy()
+        {
+            Logger.LogInfo("Destroying Arcanism.");
+            DestroyAllOfType<CooldownManager>();
+            DestroyAllOfType<ExtendedSkill>();
+
+            BepInEx.Logging.Logger.Sources.Remove(Log);
+            harmonyPatcher.UnpatchSelf();
+        }
+
+        void DestroyAllOfType<T>() where T : UnityEngine.Object
+        {
+            foreach (var obj in FindObjectsOfType<T>())
+                Destroy(obj);
+        }
 
         public static void LoadSprites()
         {
             itemSpriteById = new Dictionary<string, Sprite>();
+            skillSpriteById = new Dictionary<string, Sprite>();
 
             string nestedAssetsPath = Path.Combine(Paths.PluginPath, "Arcanism", "Assets");
             string rootAssetsPath = Path.Combine(Paths.PluginPath, "Assets"); // check the root plugins folder in case Arcanism wasn't placed in its own folder
@@ -67,6 +93,7 @@ namespace Arcanism
             }
 
             LoadSpriteSet(assetsPath, "Items", itemSpriteById);
+            LoadSpriteSet(assetsPath, "Skills", skillSpriteById);
         }
 
         private static void LoadSpriteSet(string assetsPath, string spriteSet, Dictionary<string, Sprite> map)
@@ -75,14 +102,16 @@ namespace Arcanism
             string[] filePaths = Directory.GetFiles(spriteSetPath);
             foreach (var filePath in filePaths)
             {
-                string id = Path.GetFileNameWithoutExtension(filePath);
+                string[] ids = Path.GetFileNameWithoutExtension(filePath).Split('-'); // to re-use sprite for multiple IDs, e.g. 90000-90001.png
                 byte[] imageData = File.ReadAllBytes(filePath);
 
                 var texture = new Texture2D(default, default);
                 texture.LoadImage(imageData);
 
                 var sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
-                map.Add(id, sprite);
+                
+                foreach(var id in ids)
+                    map.Add(id, sprite);
             }
             Main.Log.LogInfo($"Loaded {map.Count} sprites for {spriteSet}.");
         }
@@ -91,35 +120,6 @@ namespace Arcanism
     public static class Extensions
     {
 
-        // Helper methods for hotkey cooldown management -- there's a bit of a design inversion in Erenshor in which a *character* doesn't experience a cooldown on their spell/skill; instead any *hotkey in their bar*
-        // which is assigned to that spell or skill gets cooldown applied to it, and separately, rather than 
-        /*public static List<Hotkeys> GetHotkeysFor(this HotkeyManager hkm, Spell spell) => hkm.AllHotkeys.FindAll(hk => hk.AssignedSpell == spell || hk.AssignedItem?.MyItem?.ItemEffectOnClick == spell);
-        public static List<Hotkeys> GetHotkeysFor(this HotkeyManager hkm, Skill skill) => hkm.AllHotkeys.FindAll(hk => hk.AssignedSkill == skill || hk.AssignedItem?.MyItem?.ItemSkillUse == skill);
-        
-        public static List<Hotkeys> AddCooldown(this HotkeyManager hkm, Character caster, Spell spell, float cooldownFactor = 1f)
-        {
-            var casterSkills = caster.MySkills;
-            float cooldownReductionFactor = casterSkills != null ? 1f - (casterSkills.GetAscensionRank("7758218") * 0.1f) : 1f; // Arcanist Cooldown Reduction
-            float cooldown = spell.Cooldown * 60f * cooldownFactor * cooldownReductionFactor;
-            var hotkeys = hkm.GetHotkeysFor(spell);
-            hotkeys.ForEach(hk => hk.AddCooldown(cooldown));
-            return hotkeys;
-        }
-
-        public static List<Hotkeys> AddCooldown(this HotkeyManager hkm, Character caster, Skill skill, float cooldownFactor = 1f)
-        {
-            var casterSkills = caster.MySkills;
-            float cooldown = skill.Cooldown * cooldownFactor;  // unlike spells, skills have the * 60 baked into their cooldown stat already, JUST to fuck with me
-            var hotkeys = hkm.GetHotkeysFor(skill);
-            hotkeys.ForEach(hk => hk.AddCooldown(cooldown));
-            return hotkeys;
-        }
-
-        public static void AddCooldown(this Hotkeys hotkey, float cooldownDuration)
-        {
-            if (hotkey.Cooldown <= 20 || cooldownDuration < hotkey.Cooldown)
-                hotkey.Cooldown = cooldownDuration;
-        }*/
         
         public static float GetRelevantCooldown(this Hotkeys instance)
         {
@@ -143,20 +143,36 @@ namespace Arcanism
 
         public static CooldownManager GetCooldownManager(this Character c)
         {
-            return c.GetComponent<CooldownManager>();
+            // Everyone needs a cool man. Previously I patched the AddComponent into Character.Awake but to fix issues w/ reloading plugin at runtime, now doing it here
+            return CooldownManager.GetOrCreate(c);
+        }
+
+        public static bool IsDead(this Character c)
+        {
+            return c.MyStats.GetCurrentHP() <= 0;
         }
 
         public static bool KnowsSkill(this UseSkill mySkills, string skillId) => mySkills.KnownSkills.Find(ks => ks.Id == skillId) != null;
         public static bool KnowsSkill(this UseSkill mySkills, Skill skill) => mySkills.KnowsSkill(skill.Id);
 
-        // Quick hack: wanna be able to manually specify colour of text for string popups. Popups are pooled and popIndex is incremented AFTER using one, so grab index and reference before,
-        // run vanilla code which actually updates the DmgPop to world space+string, then return it.
-        public static DmgPop GenPopupStringAndReturnPopup(this Misc misc, string msg, Transform t)
+        /* Quick hack: wanna be able to manually tweak DmgPops without messing up the pool, so this clones and returns one which gets cleaned up after.
+         * Obviously, only for sporadic use considering from a performance perspective it defeats the purpose of the pool.
+        */
+        public static DmgPop CreateDmgPopClone(this Misc misc, string msg, Transform t)
         {
             int popIndex = Traverse.Create(misc).Field<int>("popIndex").Value;
             var nextPopup = misc.DmgPopup[popIndex];
-            misc.GenPopupString(msg, t);
-            return nextPopup;
+            
+            var clone = GameObject.Instantiate(nextPopup);
+            clone.gameObject.SetActive(true);
+            clone.LoadInfo(msg, t);
+            clone.transform.position = t.transform.position + Vector3.up * 5f;
+            clone.Num.fontSize = 4;
+            clone.speed = 2.5f;
+            clone.Num.fontStyle = TMPro.FontStyles.Normal;
+            GameObject.Destroy(clone.gameObject, 2);
+            
+            return clone;
         }
 
         // NOTE: Removes from start line (inclusive) last of match lines (inclusive) -- i.e. all match line parameters will be removed.
