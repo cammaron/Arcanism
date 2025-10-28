@@ -24,6 +24,7 @@ namespace Arcanism
         internal static ManualLogSource Log;
         internal static Dictionary<string, Sprite> itemSpriteById;
         internal static Dictionary<string, Sprite> skillSpriteById;
+        internal static Dictionary<string, Sprite> miscSpritesByName;
 
         Harmony harmonyPatcher;
 
@@ -41,6 +42,12 @@ namespace Arcanism
                 ControlChant.CreateExtension(GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.CONTROL_CHANT_SKILL_ID));
             if (GameData.SkillDatabase != null && GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.TWIN_SPELL_SKILL_ID) != null)
                 TwinSpell.CreateExtension(GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.TWIN_SPELL_SKILL_ID));
+
+            // This is to ensure any existing NPCs have the requisite hover UI even after a hot reload
+            foreach(var npc in FindObjectsOfType<NPC>())
+            {
+                npc.gameObject.AddComponent<CharacterHoverUI>();
+            }
         }
 
 #if DEBUG
@@ -60,12 +67,13 @@ namespace Arcanism
 #endif
         void OnDestroy()
         {
-            Logger.LogInfo("Destroying Arcanism.");
+            Logger?.LogInfo("Destroying Arcanism.");
             DestroyAllOfType<CooldownManager>();
             DestroyAllOfType<ExtendedSkill>();
+            DestroyAllOfType<CharacterHoverUI>();
 
-            BepInEx.Logging.Logger.Sources.Remove(Log);
-            harmonyPatcher.UnpatchSelf();
+            BepInEx.Logging.Logger.Sources?.Remove(Log);
+            harmonyPatcher?.UnpatchSelf();
         }
 
         void DestroyAllOfType<T>() where T : UnityEngine.Object
@@ -78,6 +86,7 @@ namespace Arcanism
         {
             itemSpriteById = new Dictionary<string, Sprite>();
             skillSpriteById = new Dictionary<string, Sprite>();
+            miscSpritesByName = new Dictionary<string, Sprite>();
 
             string nestedAssetsPath = Path.Combine(Paths.PluginPath, "Arcanism", "Assets");
             string rootAssetsPath = Path.Combine(Paths.PluginPath, "Assets"); // check the root plugins folder in case Arcanism wasn't placed in its own folder
@@ -94,6 +103,7 @@ namespace Arcanism
 
             LoadSpriteSet(assetsPath, "Items", itemSpriteById);
             LoadSpriteSet(assetsPath, "Skills", skillSpriteById);
+            LoadSpriteSet(assetsPath, "Misc", miscSpritesByName);
         }
 
         private static void LoadSpriteSet(string assetsPath, string spriteSet, Dictionary<string, Sprite> map)

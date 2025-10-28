@@ -23,8 +23,14 @@ namespace Arcanism.Patches
 			if (txt == null) return true;
 
 
-			
-			if (txt.StartsWith("/arc.refresh"))
+
+			if (txt.StartsWith("/arc.quality"))
+			{
+				int factor = int.Parse(txt.Split(' ')[1]);
+				LootWindow_LoadWindow.QUALITY_CHANCE_FACTOR = factor;
+				return false;
+			}
+			else if (txt.StartsWith("/arc.refresh"))
             {
 				ItemDatabase_Start.UpdateItemDatabase(GameData.ItemDB);
 				UpdateSocialLog.LogAdd("Refreshed databases (just item DB for now, and won't work on new items)");

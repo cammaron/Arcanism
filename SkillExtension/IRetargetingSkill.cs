@@ -8,6 +8,7 @@ namespace Arcanism.SkillExtension
 {
     interface IRetargetingSkill
     {
+        IEnumerable<Character> GetAllTargets();
         Character GetNextTarget();
     }
 }

@@ -6,7 +6,7 @@ using HarmonyLib;
 namespace Arcanism.Patches
 {
     [HarmonyPatch(typeof(NPC), "Start")]
-    public class NPCStartPatch
+    public class NPC_Start
     {
 
         static void Prefix(NPC __instance)
@@ -38,8 +38,15 @@ namespace Arcanism.Patches
                     shop.ItemsForSale.Remove(GameData.ItemDB.GetItemByID(ItemId.SPIDERSILK_SHIRT)); // this is replaced by Novice Robe
                 }
             }
-            
-            
+        }
+
+        static void Postfix(NPC __instance)
+        {
+            var character = __instance.GetChar();
+            if (character != null && character.GetComponent<CharacterHoverUI>() == null)
+            {
+                character.gameObject.AddComponent<CharacterHoverUI>();
+            }
         }
     }
 }

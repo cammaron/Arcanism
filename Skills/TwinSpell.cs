@@ -181,5 +181,10 @@ namespace Arcanism.Skills
         protected override bool IsInterrupted() => vessel == null;
 
         protected override bool IsFinished() => isFinished;
+
+        public IEnumerable<Character> GetAllTargets()
+        {
+            return allTargets;
+        }
     }
 }

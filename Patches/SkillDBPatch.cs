@@ -110,7 +110,8 @@ namespace Arcanism.Patches
 
 		public static void RefreshSprites(SkillDB skillDb = null)
 		{
-			if (skillDb == null) skillDb= GameData.SkillDatabase;
+			if (skillDb == null) skillDb = GameData.SkillDatabase;
+			
 			foreach (var entry in Main.skillSpriteById)
 			{
 				skillDb.GetSkillByID(entry.Key).SkillIcon = entry.Value;

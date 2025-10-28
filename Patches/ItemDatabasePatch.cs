@@ -181,6 +181,13 @@ namespace Arcanism.Patches
         // and the value -- an Item itself -- is merely a shell for carrying stats, not needing to be a real Item record
         public static Dictionary<ItemId, Dictionary<ItemId, Item>> setBonusesByItemId = new Dictionary<ItemId, Dictionary<ItemId, Item>>();
 
+        private static Item[] ItemDBBeforeRecks;
+
+        public static Item[] GetItemDBWithoutLootRarity()
+        {
+            return ItemDBBeforeRecks;
+        }
+
         static void Postfix(ItemDatabase __instance)
         {
             UpdateItemDatabase(__instance);
@@ -189,6 +196,7 @@ namespace Arcanism.Patches
         public static void UpdateItemDatabase(ItemDatabase __instance)
         {
             Main.Log.LogInfo("Adding and updating items for Arcanism.");
+
             var itemDictionary = Traverse.Create(__instance).Field<Dictionary<string, Item>>("itemDict").Value;
             var itemsToAdd = new List<Item>();
 
@@ -246,6 +254,9 @@ namespace Arcanism.Patches
             __instance.ItemDBList = new List<Item>(__instance.ItemDB);
 
             RefreshSprites(__instance);
+
+            ItemDBBeforeRecks = new Item[__instance.ItemDB.Length];
+            System.Array.Copy(__instance.ItemDB, ItemDBBeforeRecks, __instance.ItemDB.Length);
         }
 
         static Item CreateSkillBook(Item baseSkillBook, ItemId id, string name, int itemLevel, string skillId, int value)
