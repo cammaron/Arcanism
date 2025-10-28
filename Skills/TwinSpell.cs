@@ -98,6 +98,7 @@ namespace Arcanism.Skills
                 UpdateSocialLog.LogAdd($"Twinning spell to {target.name} (target {allTargets.Count}/{maxTargets})");
                 GameData.CB.OCTxt.text = allTargets.Count == 2 ? "-Twinned!-" : allTargets.Count == 3 ? "-TRIPLED!-" : "-FULL STACK!!-";
                 GameData.CB.OCTxt.transform.gameObject.SetActive(true);
+                GameData.CB.OCTxt.fontSize = 48;
                 showTextUntilTime = Time.time + 0.6f;
             }
         }
