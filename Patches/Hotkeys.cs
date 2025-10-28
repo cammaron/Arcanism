@@ -15,6 +15,8 @@ namespace Arcanism.Patches
         static void Postfix(Hotkeys __instance, Text ___MyHKText, Color32 ___greyOut, string ___savedStr)
         {
             float cooldown = __instance.GetRelevantCooldown();
+            ___MyHKText.fontSize = 25;
+            ___MyHKText.resizeTextForBestFit = false;
 
             if (cooldown > 0f)
             {
@@ -22,6 +24,7 @@ namespace Arcanism.Patches
                 // Practically, it will now say "1" when you're anywhere from 0.0 - 1.0, and then straight to off cooldown --
                 // with Round, it will say 1 from 0.5 - 1.49, and actually say 0 for half a second below 0.5, despite still being on cooldown
                 ___MyHKText.text = Mathf.CeilToInt(cooldown).ToString();
+                //___MyHKText.resizeTextForBestFit = true;
                 __instance.MyImage.color = ___greyOut;
             }
             else
