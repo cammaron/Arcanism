@@ -355,8 +355,8 @@
     <Compile Include="Patches\HotkeyManager.cs" />
     <Compile Include="Patches\Item.cs" />
     <Compile Include="Patches\ItemInfoWindow.cs" />
-    <Compile Include="Patches\LootRarityPatches.cs" />
     <Compile Include="Patches\LootWindow.cs" />
+    <Compile Include="Patches\SimInspect.cs" />
     <Compile Include="Patches\WandBolt.cs" />
     <Compile Include="Skills\ControlChant.cs" />
     <Compile Include="CooldownManager.cs" />
@@ -437,6 +437,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="LootHelper.cs" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />

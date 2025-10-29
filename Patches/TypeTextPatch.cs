@@ -24,19 +24,7 @@ namespace Arcanism.Patches
 
 
 
-			if (txt.StartsWith("/arc.quality"))
-			{
-				int factor = int.Parse(txt.Split(' ')[1]);
-				LootWindow_LoadWindow.QUALITY_CHANCE_FACTOR = factor;
-				return false;
-			}
-			else if (txt.StartsWith("/arc.refresh"))
-            {
-				ItemDatabase_Start.UpdateItemDatabase(GameData.ItemDB);
-				UpdateSocialLog.LogAdd("Refreshed databases (just item DB for now, and won't work on new items)");
-				return false;
-            }
-			else if (txt.StartsWith("/arc.litem"))
+			if (txt.StartsWith("/arc.litem")) // LITEM = "last item" -- /arc.litem <setting> <val> -- shorthand for /arc.item <lastitem> <setting> <val>
 			{
 				if (lastItemEdit == null)
 				{
@@ -44,7 +32,7 @@ namespace Arcanism.Patches
 					return false;
 				}
 				txt = txt.Replace("/arc.litem", $"/arc.item {lastItemEdit.ItemName.Replace(" ", "_")}");
-			} else if (txt.StartsWith("/arc.sitem"))
+			} else if (txt.StartsWith("/arc.sitem")) // SITEM = "last item setting" --  /arc.sitem <val> -- shorthand for /arc.item <lastitem> <lastsetting> <val>
 			{
 				if (lastItemEdit == null || lastItemSetting == null)
 				{
@@ -58,7 +46,31 @@ namespace Arcanism.Patches
 			var lowerTxt = txt.ToLower();
 
 			var stats = GameData.PlayerStats;
-			if (lowerTxt.StartsWith("/arc.additem"))
+
+
+			if (lowerTxt.StartsWith("/arc.quality"))
+			{
+				int factor = int.Parse(txt.Split(' ')[1]);
+				LootHelper.QUALITY_CHANCE_FACTOR = factor;
+				return false;
+			}
+			else if (lowerTxt.StartsWith("/arc.refresh"))
+			{
+				ItemDatabase_Start.UpdateItemDatabase(GameData.ItemDB);
+				UpdateSocialLog.LogAdd("Refreshed databases (just item DB for now, and won't work on new items)");
+				return false;
+			}
+			else if (lowerTxt.StartsWith("/arc.item.id")) // look up item details by ID
+			{
+				string id = txt.Split(' ')[1];
+				var item = GameData.ItemDB.GetItemByID(id);
+				if (item != null)
+					UpdateSocialLog.LogAdd($"[{id}] {item.ItemName} - {item.RequiredSlot}");
+				else
+					UpdateSocialLog.LogAdd($"No item found for ID {id}");
+				return false;
+			}
+			else if (lowerTxt.StartsWith("/arc.item.add"))
             {
 				var tokens = lowerTxt.Split(' ');
 				string name = txt.Split('"')[1];

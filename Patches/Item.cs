@@ -14,46 +14,46 @@ namespace Arcanism.Patches
 	 * 31-34: as above but for purple
 	 * */
 
-	static class ItemExtensions
+	public static class ItemExtensions
     {
 		public enum Blessing
 		{
-			NONE = 0,
-			BLESSED = 1,
-			GODLY = 2
+			NONE = 10,
+			BLESSED = 20,
+			GODLY = 30
 		}
 
 		public enum Quality
 		{
-			NORMAL = 1,  // The OCD wants JUNK=1, NORMAL=2 in order, but that would mean all default quantity items existing in savefile instantly become Junk, so...
-			JUNK = 2,
-			SUPERIOR = 3,
-			MASTERWORK = 4
+			JUNK = 0, 
+			NORMAL = 1,
+			SUPERIOR = 2,
+			MASTERWORK = 3
 		}
 
 		public static bool IsItemQualityUpdated(int quantity)
         {
-			return quantity >= 10;
+			return quantity >= (int)Blessing.NONE;
         }
 
 		public static Blessing GetBlessLevel(int quantity)
 		{
-			if (quantity < 20)
-				return Blessing.NONE;
-			if (quantity < 30)
+			if (!IsItemQualityUpdated(quantity))
+				return (Blessing) (quantity * 10);
+
+			if (quantity >= (int)Blessing.GODLY)
+				return Blessing.GODLY;
+			if (quantity >= (int)Blessing.BLESSED)
 				return Blessing.BLESSED;
-			return Blessing.GODLY;
+
+			return Blessing.NONE;
 		}
 
 		public static Quality GetQualityLevel(int quantity)
 		{
-			if (quantity < 10) return Quality.NORMAL; // An item that hasn't been processed -- dropped prior to Arcanism installation
+			if (!IsItemQualityUpdated(quantity)) return Quality.NORMAL; // An item that hasn't been processed -- dropped prior to Arcanism installation
 
-			int digit = (quantity % 10);
-			
-			if (digit > (int)Quality.MASTERWORK) return Quality.NORMAL;
-
-			return (Quality)digit;
+			return (Quality) (quantity - (int)GetBlessLevel(quantity));
 		}
 
 		public static float GetMod(int quantity, float modFactor = 1)
