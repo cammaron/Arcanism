@@ -371,17 +371,17 @@
     <Compile Include="Patches\ItemDatabasePatch.cs" />
     <Compile Include="Patches\LootTable.cs" />
     <Compile Include="Main.cs" />
-    <Compile Include="Patches\SkillDBPatch.cs" />
-    <Compile Include="Patches\SpellDBPatch.cs" />
-    <Compile Include="Patches\TypeTextPatch.cs" />
+    <Compile Include="Patches\SkillDB.cs" />
+    <Compile Include="Patches\SpellDB.cs" />
+    <Compile Include="Patches\TypeText.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Patches\SpellVesselPatch.cs" />
-    <Compile Include="Patches\StatsPatch.cs" />
+    <Compile Include="Patches\SpellVessel.cs" />
+    <Compile Include="Patches\Stats.cs" />
     <Compile Include="SkillExtension\ISpellDamageModifier.cs" />
     <Compile Include="SkillExtension\ISpellCooldownModifier.cs" />
     <Compile Include="SkillExtension\ExtendedSkill.cs" />
     <Compile Include="Skills\TwinSpell.cs" />
-    <Compile Include="Patches\UseSkillPatch.cs" />
+    <Compile Include="Patches\UseSkill.cs" />
     <Compile Include="Patches\NPC.cs" />
     <Compile Include="SpellTargetIndicator.cs" />
   </ItemGroup>

@@ -44,9 +44,9 @@ namespace Arcanism.Skills
                     }
 
                     component.maxTargets = 1; // original target, plus one per skill v
-                    if (caster.MySkills.KnowsSkill(SkillDBStartPatch.TWIN_SPELL_SKILL_ID)) component.maxTargets += 1;
-                    if (caster.MySkills.KnowsSkill(SkillDBStartPatch.TWIN_SPELL_MASTERY_SKILL_ID)) component.maxTargets += 1;
-                    if (caster.MySkills.KnowsSkill(SkillDBStartPatch.TWIN_SPELL_MASTERY_2_SKILL_ID)) component.maxTargets += 1;
+                    if (caster.MySkills.KnowsSkill(SkillDB_Start.TWIN_SPELL_SKILL_ID)) component.maxTargets += 1;
+                    if (caster.MySkills.KnowsSkill(SkillDB_Start.TWIN_SPELL_MASTERY_SKILL_ID)) component.maxTargets += 1;
+                    if (caster.MySkills.KnowsSkill(SkillDB_Start.TWIN_SPELL_MASTERY_2_SKILL_ID)) component.maxTargets += 1;
                 }
 
                 return component;
@@ -110,7 +110,7 @@ namespace Arcanism.Skills
             {
                 npcsDiedWhileCasting = new HashSet<Character>(allTargets.FindAll(t => t == IsTargetDead(t)));
                 
-                if (caster.MySkills.KnowsSkill(SkillDBStartPatch.VANISHING_TWIN_SKILL_ID))
+                if (caster.MySkills.KnowsSkill(SkillDB_Start.VANISHING_TWIN_SKILL_ID))
                     multi += npcsDiedWhileCasting.Count;
 
             }
@@ -118,8 +118,8 @@ namespace Arcanism.Skills
             hasAttacked = true;
 
 
-            if (caster.MySkills.KnowsSkill(SkillDBStartPatch.SIBLING_SYNGERY_SKILL_ID))
-                multi *= 1 + (SkillDBStartPatch.SIBLING_SYNERGY_POWER * allTargets.Count);
+            if (caster.MySkills.KnowsSkill(SkillDB_Start.SIBLING_SYNGERY_SKILL_ID))
+                multi *= 1 + (SkillDB_Start.SIBLING_SYNERGY_POWER * allTargets.Count);
 
             return multi;
         }
@@ -145,7 +145,7 @@ namespace Arcanism.Skills
         private void ApplyParasiticTwin()
         {
             UpdateSocialLog.CombatLogAdd("The dead target's soul saps the life of those connected to it by Twin Spell!");
-            var parasiticTwinSpell = GameData.SpellDatabase.GetSpellByID(SpellDBStartPatch.PARASITIC_TWIN_SPELL_ID);
+            var parasiticTwinSpell = GameData.SpellDatabase.GetSpellByID(SpellDB_Start.PARASITIC_TWIN_SPELL_ID);
             // Parasitic Twin *has* no base target damage, thus all its damage is the "bonus damage" -- it's completely calculated by int/prof, scaling with character growth. With a max int around 353ish (before blessings) and max int prof, this will hit for 1700 base (*BASE*, as in, before other int/prof scaling increases it. so, same as damage listing on any spell desc)
             int baseDamage = Mathf.RoundToInt(caster.MyStats.GetCurrentInt() * 5 * (caster.MyStats.IntScaleMod / 40));
             int modifiedDamage = SpellVessel_CalcDmgBonus.CalculateSpellDamage(caster, baseDamage, false);
@@ -162,7 +162,7 @@ namespace Arcanism.Skills
         private int GetNextTargetManaCost()
         {
             // 1.3x exponent means 15% more mana than 2 casts for 2 targets; 33% more for 3; 54% more for 4. Remember, that's 54% more than *4 casts* which is already a HUGE amount of mana usage.
-            float costExponent = 1.3f * (1 - caster.MySkills.GetAscensionRank(SkillDBStartPatch.MIND_SPLIT_ASCENSION_ID) * SkillDBStartPatch.MIND_SPLIT_COST_FACTOR);
+            float costExponent = 1.3f * (1 - caster.MySkills.GetAscensionRank(SkillDB_Start.MIND_SPLIT_ASCENSION_ID) * SkillDB_Start.MIND_SPLIT_COST_FACTOR);
             int additionalManaCost = (int)(Mathf.Pow(costExponent, allTargets.Count) * vessel.spell.ManaCost);
 
             return additionalManaCost;
@@ -170,8 +170,8 @@ namespace Arcanism.Skills
 
         protected override float CalculateCooldownFactor()
         {
-            int refractionLevel = caster.MySkills.GetAscensionRank(SkillDBStartPatch.REFRACTION_ASCENSION_ID);
-            return 1f - (refractionLevel * SkillDBStartPatch.REFRACTION_COOLDOWN_FACTOR);
+            int refractionLevel = caster.MySkills.GetAscensionRank(SkillDB_Start.REFRACTION_ASCENSION_ID);
+            return 1f - (refractionLevel * SkillDB_Start.REFRACTION_COOLDOWN_FACTOR);
         }
 
         private bool CanAddMoreTargets() => allTargets.Count < maxTargets;

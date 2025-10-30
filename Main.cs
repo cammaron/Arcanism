@@ -38,10 +38,10 @@ namespace Arcanism
             harmonyPatcher = new Harmony(PLUGIN_GUID);
             harmonyPatcher.PatchAll();
 
-            if (GameData.SkillDatabase != null && GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.CONTROL_CHANT_SKILL_ID) != null)
-                ControlChant.CreateExtension(GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.CONTROL_CHANT_SKILL_ID));
-            if (GameData.SkillDatabase != null && GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.TWIN_SPELL_SKILL_ID) != null)
-                TwinSpell.CreateExtension(GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.TWIN_SPELL_SKILL_ID));
+            if (GameData.SkillDatabase != null && GameData.SkillDatabase.GetSkillByID(SkillDB_Start.CONTROL_CHANT_SKILL_ID) != null)
+                ControlChant.CreateExtension(GameData.SkillDatabase.GetSkillByID(SkillDB_Start.CONTROL_CHANT_SKILL_ID));
+            if (GameData.SkillDatabase != null && GameData.SkillDatabase.GetSkillByID(SkillDB_Start.TWIN_SPELL_SKILL_ID) != null)
+                TwinSpell.CreateExtension(GameData.SkillDatabase.GetSkillByID(SkillDB_Start.TWIN_SPELL_SKILL_ID));
 
             // This is to ensure any existing NPCs have the requisite hover UI even after a hot reload
             foreach(var npc in FindObjectsOfType<NPC>())

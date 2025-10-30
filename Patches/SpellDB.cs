@@ -7,7 +7,7 @@ namespace Arcanism.Patches
 {
 
 	[HarmonyPatch(typeof(SpellDB), "Start")]
-	public class SpellDBStartPatch
+	public class SpellDB_Start
     {
 		public const string HARDENED_SKIN_SPELL_ID = "7281576";
 		public const string COMA_SPELL_ID = "6669884";

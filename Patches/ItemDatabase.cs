@@ -203,22 +203,22 @@ namespace Arcanism.Patches
             var funeralPyreScroll = __instance.GetItemByID(ItemId.FUNERAL_PYRE);
             string origName = funeralPyreScroll.ItemName;
             funeralPyreScroll.ItemIcon = __instance.GetItemByID("335358").ItemIcon; // Make it purple!
-            funeralPyreScroll.ItemName = $"Spell Scroll: {SpellDBStartPatch.FUNERAL_PYRE_NAME_CHANGE}";
+            funeralPyreScroll.ItemName = $"Spell Scroll: {SpellDB_Start.FUNERAL_PYRE_NAME_CHANGE}";
             Main.Log.LogInfo($"Item updated: {origName}");
 
             var controlChant = __instance.GetItemByID(ItemId.CONTROL_CHANT);
-            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(controlChant, ItemId.EXPERT_CONTROL, "Expert Control I", 9, SkillDBStartPatch.EXPERT_CONTROL_SKILL_ID, 35000))); // Sold by Braxonian Manfred
-            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(controlChant, ItemId.PERFECT_RELEASE, "Perfect Release I", 14, SkillDBStartPatch.PERFECT_RELEASE_SKILL_ID, 75000))); // Sold by Braxonian Manfred
-            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(controlChant, ItemId.EXPERT_CONTROL_2, "Expert Control II", 17, SkillDBStartPatch.EXPERT_CONTROL_2_SKILL_ID, 125000))); // Sold by Braxonian Manfred
-            itemsToAdd.Add(DroppedBy(NpcName.ELWIO_THE_TRAITOR, DropChance.RARE, CreateSkillBook(controlChant, ItemId.PERFECT_RELEASE_2, "Perfect Release II", 32, SkillDBStartPatch.PERFECT_RELEASE_2_SKILL_ID, 115000))); // Dropped by Elwio the Traitor in Vitheo's Rest
+            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(controlChant, ItemId.EXPERT_CONTROL, "Expert Control I", 9, SkillDB_Start.EXPERT_CONTROL_SKILL_ID, 35000))); // Sold by Braxonian Manfred
+            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(controlChant, ItemId.PERFECT_RELEASE, "Perfect Release I", 14, SkillDB_Start.PERFECT_RELEASE_SKILL_ID, 75000))); // Sold by Braxonian Manfred
+            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(controlChant, ItemId.EXPERT_CONTROL_2, "Expert Control II", 17, SkillDB_Start.EXPERT_CONTROL_2_SKILL_ID, 125000))); // Sold by Braxonian Manfred
+            itemsToAdd.Add(DroppedBy(NpcName.ELWIO_THE_TRAITOR, DropChance.RARE, CreateSkillBook(controlChant, ItemId.PERFECT_RELEASE_2, "Perfect Release II", 32, SkillDB_Start.PERFECT_RELEASE_2_SKILL_ID, 115000))); // Dropped by Elwio the Traitor in Vitheo's Rest
 
 
-            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(controlChant, ItemId.TWIN_SPELL, "Twin Spell", 10, SkillDBStartPatch.TWIN_SPELL_SKILL_ID, 40000)));
-            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(controlChant, ItemId.VANISHING_TWIN, "Vanishing Twin", 15, SkillDBStartPatch.VANISHING_TWIN_SKILL_ID, 85000)));
-            itemsToAdd.Add(DroppedBy(NpcName.SEED_OF_BLIGHT, DropChance.UNCOMMON, CreateSkillBook(controlChant, ItemId.SIBLING_SYNERGY, "Sibling Synergy", 18, SkillDBStartPatch.SIBLING_SYNGERY_SKILL_ID, 85000)));
-            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(controlChant, ItemId.TWIN_SPELL_2, "Twin Spell Mastery I", 20, SkillDBStartPatch.TWIN_SPELL_MASTERY_SKILL_ID, 250000)));
-            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(controlChant, ItemId.PARASITIC_TWIN, "Parasitic Twin", 23, SkillDBStartPatch.PARASITIC_TWIN_SKILL_ID, 340000)));
-            itemsToAdd.Add(DroppedBy(NpcName.FENTON_THE_BLIGHTED, DropChance.RARE, CreateSkillBook(controlChant, ItemId.TWIN_SPELL_3, "Twin Spell Mastery II", 27, SkillDBStartPatch.TWIN_SPELL_MASTERY_2_SKILL_ID, 95000)));
+            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(controlChant, ItemId.TWIN_SPELL, "Twin Spell", 10, SkillDB_Start.TWIN_SPELL_SKILL_ID, 40000)));
+            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(controlChant, ItemId.VANISHING_TWIN, "Vanishing Twin", 15, SkillDB_Start.VANISHING_TWIN_SKILL_ID, 85000)));
+            itemsToAdd.Add(DroppedBy(NpcName.SEED_OF_BLIGHT, DropChance.UNCOMMON, CreateSkillBook(controlChant, ItemId.SIBLING_SYNERGY, "Sibling Synergy", 18, SkillDB_Start.SIBLING_SYNGERY_SKILL_ID, 85000)));
+            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(controlChant, ItemId.TWIN_SPELL_2, "Twin Spell Mastery I", 20, SkillDB_Start.TWIN_SPELL_MASTERY_SKILL_ID, 250000)));
+            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(controlChant, ItemId.PARASITIC_TWIN, "Parasitic Twin", 23, SkillDB_Start.PARASITIC_TWIN_SKILL_ID, 340000)));
+            itemsToAdd.Add(DroppedBy(NpcName.FENTON_THE_BLIGHTED, DropChance.RARE, CreateSkillBook(controlChant, ItemId.TWIN_SPELL_3, "Twin Spell Mastery II", 27, SkillDB_Start.TWIN_SPELL_MASTERY_2_SKILL_ID, 95000)));
 
 
 
@@ -638,7 +638,7 @@ namespace Arcanism.Patches
             new EquipmentGenerator { Id = ItemId.WEAK_WAND }.TuneWand(7, 1, 10).Generate(__instance); // Competing with: Ice Bolt: 19 damage
             new EquipmentGenerator { Id = ItemId.COPPER_SCEPTRE }.TuneWand(24, 2, 25).Generate(__instance);
             new EquipmentGenerator { Id = ItemId.ADEPT_WAND }.TuneWand(22, 1, 18).Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.WAND_OF_AIR }.TuneWand(29, 1, 18, SpellDBStartPatch.JOLT_SPELL_ID, 10).Generate(__instance); // Competing with: Jolt: 200
+            new EquipmentGenerator { Id = ItemId.WAND_OF_AIR }.TuneWand(29, 1, 18, SpellDB_Start.JOLT_SPELL_ID, 10).Generate(__instance); // Competing with: Jolt: 200
             new EquipmentGenerator { Id = ItemId.HARDENED_SCEPTRE }.TuneWand(80, 2, 25).Generate(__instance); 
             new EquipmentGenerator { Id = ItemId.EYESTALK_WAND }.TuneWand(65, 2, 7, null, 25).Generate(__instance); 
 
@@ -667,7 +667,7 @@ namespace Arcanism.Patches
             // Boneweaver's gets nerfs relative to peers but higher raw wand DPS, and the benefit of its amazing DoT
             // So now, there's actually interesting choices at this level!
             new EquipmentGenerator { Id = ItemId.BLACKFLAME_TORCH,       Damage = 6, AttackDelay = 1,   HP = 0, Mana = 90, Int = 17, Wis = 5, Cha = 13, Res = 3 }.TuneWand(180, 2, 25).Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.SCORCHED_WALKING_STICK, ClickEffect = GameData.SpellDatabase.GetSpellByID(SpellDBStartPatch.BRAXS_FURY_SPELL_ID),    SpellCastTime = 3.2f,
+            new EquipmentGenerator { Id = ItemId.SCORCHED_WALKING_STICK, ClickEffect = GameData.SpellDatabase.GetSpellByID(SpellDB_Start.BRAXS_FURY_SPELL_ID),    SpellCastTime = 3.2f,
                     HP = 60, Mana = 100, AC = 14, End = 7, Int = 20, Wis = 30, Cha = 6, Res = 4, SlotType = Item.SlotType.Primary, WeaponType = Item.WeaponType.TwoHandStaff }.Generate(__instance);
             new EquipmentGenerator { Id = ItemId.BONEWEAVERS_LEG,  HP = 25,  Mana = 60, AC = 0, End = 0, Int = 12, Wis = 8, Cha = 3, Res = 2 }.TuneWand(140, 1, 18).Generate(__instance);
 
@@ -699,14 +699,14 @@ namespace Arcanism.Patches
             // but has better stats in general, and is also a RANGED weapon, making its chance to proc at all much more valuable
             // DPS goal: 320 (so mem of snow is 50% stronger, but requires close range and slow/frustrating)
             // so Brax Fury 1300 dmg 20%/s = 260 dps, make weapon 60 dps
-            new EquipmentGenerator { Id = ItemId.VOLCANIC_SCEPTRE, HP = 180, Mana = 30, AC = 15, Int = 5, Wis = 6, Cha = 20, Res = 2,}.TuneWand(60, 1, 25, SpellDBStartPatch.BRAXS_FURY_SPELL_ID, 20).Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.VOLCANIC_SCEPTRE, HP = 180, Mana = 30, AC = 15, Int = 5, Wis = 6, Cha = 20, Res = 2,}.TuneWand(60, 1, 25, SpellDB_Start.BRAXS_FURY_SPELL_ID, 20).Generate(__instance);
 
             // changing res crystal to be a wand type instead of melee, got enough of those, and doesn't... *look* like a melee weapon.
             // Stats once paired in set are "all 'round good" but not stand-out amazing -- what makes it special is its atk speed halves, dmg doubles, so it ends up *powerful* as a wand in set
             // make it feel like the plasma gun from Doom! 460 DPS in set seems like a good point to get to
             var resonatingCrystal = new EquipmentGenerator { Id = ItemId.RESONATING_CRYSTAL, HP = 150, Mana = 150, AC = 12, Int = 13, Wis = 13, Cha = 13, Res = 3, 
                 WandBoltSpeed = 3, WandBoltColour = (Color) new Color32(252, 136, 255, 255),
-                WandAttackSound = GameData.SpellDatabase.GetSpellByID(SpellDBStartPatch.HARDENED_SKIN_SPELL_ID).ChargeSound,
+                WandAttackSound = GameData.SpellDatabase.GetSpellByID(SpellDB_Start.HARDENED_SKIN_SPELL_ID).ChargeSound,
                 Lore = "Sounds reverberate oddly through this crystal. Its color is dull, however, as though it's missing something..."
             }.TuneWand(115, 1, 15).Generate(__instance);
 
@@ -727,7 +727,7 @@ namespace Arcanism.Patches
             new EquipmentGenerator { Id = ItemId.SPECTRAL_SCEPTRE, Level = 29, HP = 0, Mana = 0, AC = 0, End = 0, Dex = 0, Int = 0, Wis = 0, Cha = 0, Res = 4 }.TuneWand(400, 1, 25).Generate(__instance);
 
             var braxsCandle = new EquipmentGenerator { Id = ItemId.BRAXS_CANDLE, HP = 25, Mana = 25, End = 6, Int = 0, Wis = 16, Cha = 0, Res = 0, 
-                ClickEffect = GameData.SpellDatabase.GetSpellByID(SpellDBStartPatch.DESERT_COFFIN_SPELL_ID),    SpellCastTime = 6f,
+                ClickEffect = GameData.SpellDatabase.GetSpellByID(SpellDB_Start.DESERT_COFFIN_SPELL_ID),    SpellCastTime = 6f,
                 Lore = "A large, ancient wand once wielded by a Braxonian High Priest. Only the incantation in the Braxonian Testament may awaken its power.",
             }.TuneWand(150, 1, 20).Generate(__instance);
             braxsCandle.WandEffect = null;
@@ -766,7 +766,7 @@ namespace Arcanism.Patches
             // and swapping out Magic Missile on hit for... INFERNIS! So a big advantage of using Garg is you can keep Infernis up on enemies without wasting mana/time to cast.
             // but if you don't mind doing that yourself anyway, maybe this isn't the weapon for you any more...
             // 380 DPS -- solid for endgame, but not extraordinary. 
-            new EquipmentGenerator { Id = ItemId.GARG_WAND, HP = 50, Mana = 200, Int = 35, Wis = 18, Cha = 0, Res = 5 }.TuneWand(760, 2, 25, SpellDBStartPatch.INFERNIS_SPELL_ID, 30).Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.GARG_WAND, HP = 50, Mana = 200, Int = 35, Wis = 18, Cha = 0, Res = 5 }.TuneWand(760, 2, 25, SpellDB_Start.INFERNIS_SPELL_ID, 30).Generate(__instance);
 
             // Endgame viable defensive offhander with int, wis and res
             new EquipmentGenerator { Id = ItemId.ULORS_ENCYCLOPEDIA, HP = 500, Mana = 200, AC = 40, End = 20, Int = 30, Wis = 22, Cha = 0, Res = 5 }.Generate(__instance);

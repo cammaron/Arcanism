@@ -8,7 +8,7 @@ namespace Arcanism.Patches
 {
 
 	[HarmonyPatch(typeof(SkillDB), "Start")]
-	public class SkillDBStartPatch
+	public class SkillDB_Start
     {
 		public const string CONTROL_CHANT_SKILL_ID = "10823930"; 
 		public const string EXPERT_CONTROL_SKILL_ID = "90000000";

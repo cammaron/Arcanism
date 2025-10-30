@@ -116,7 +116,7 @@ namespace Arcanism.Skills
             overchantBar = GameData.CB.OverchantBar.GetComponent<Image>();
             originalCBColor = castBar.color;
             originalOverchantColor= overchantBar.color;
-            exhaustionEffect = GameData.SpellDatabase.GetSpellByID(SpellDBStartPatch.EXHAUSTION_SPELL_ID);
+            exhaustionEffect = GameData.SpellDatabase.GetSpellByID(SpellDB_Start.EXHAUSTION_SPELL_ID);
         }
 
         void ResetCastBarColors()
@@ -161,7 +161,7 @@ namespace Arcanism.Skills
         protected bool IsPerfectReleaseReady(float completionFactor)
         {
             const float perfectReleaseFactor = .03f;
-            if (!caster.MySkills.KnowsSkill(SkillDBStartPatch.PERFECT_RELEASE_SKILL_ID))
+            if (!caster.MySkills.KnowsSkill(SkillDB_Start.PERFECT_RELEASE_SKILL_ID))
                 return false;
 
             if (caster.MyStats.CheckForStatus(exhaustionEffect))
@@ -187,8 +187,8 @@ namespace Arcanism.Skills
             vessel.UseMana = false;
             cooldownMulti = 0f;
 
-            var twinSpellSkill = GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.TWIN_SPELL_SKILL_ID);
-            if (caster.MySkills.KnowsSkill(SkillDBStartPatch.PERFECT_RELEASE_2_SKILL_ID) && caster.MySkills.KnowsSkill(twinSpellSkill))
+            var twinSpellSkill = GameData.SkillDatabase.GetSkillByID(SkillDB_Start.TWIN_SPELL_SKILL_ID);
+            if (caster.MySkills.KnowsSkill(SkillDB_Start.PERFECT_RELEASE_2_SKILL_ID) && caster.MySkills.KnowsSkill(twinSpellSkill))
             {
                 caster.GetCooldownManager().ResetCooldown(twinSpellSkill);
                 if (caster.MySkills.isPlayer) UpdateSocialLog.CombatLogAdd("Twin Spell cooldown reset by Perfect Release!", "green");
@@ -213,7 +213,7 @@ namespace Arcanism.Skills
             float backfireChance = (1 - (completionFactor)) * 100f;
             float targetDamageFactorOnBackfire = 0f;
 
-            foreach (var expertControlSkillId in new string[] { SkillDBStartPatch.EXPERT_CONTROL_SKILL_ID, SkillDBStartPatch.EXPERT_CONTROL_2_SKILL_ID })
+            foreach (var expertControlSkillId in new string[] { SkillDB_Start.EXPERT_CONTROL_SKILL_ID, SkillDB_Start.EXPERT_CONTROL_2_SKILL_ID })
             {
                 if (caster.MySkills.KnowsSkill(expertControlSkillId))
                 {

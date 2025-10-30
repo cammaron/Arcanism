@@ -6,12 +6,12 @@ using System.Reflection.Emit;
 namespace Arcanism.Patches
 {
 	[HarmonyPatch(typeof(Stats), nameof(Stats.RemoveBreakableEffects))]
-	public class StatsRemoveBreakableEffectsPatch
+	public class Stats_RemoveBreakableEffects
 	{
 		static bool DoesDamageInterruptStatusEffect(StatusEffect effect)
         {
 			int interruptChance = 20;
-			if (effect.Effect.Id == SpellDBStartPatch.COMA_SPELL_ID) interruptChance = 10;
+			if (effect.Effect.Id == SpellDB_Start.COMA_SPELL_ID) interruptChance = 10;
 			return (Random.Range(0, 100) < interruptChance);
 
 		}

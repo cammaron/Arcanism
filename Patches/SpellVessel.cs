@@ -194,9 +194,7 @@ namespace Arcanism.Patches
     [HarmonyPatch(typeof(SpellVessel), "Update")]
     class SpellVessel_Update
     {
-        public static Dictionary<Character, SpriteRenderer> targetIndicatorByTarget = new Dictionary<Character, SpriteRenderer>();
-        static readonly Color32 INDICATOR_COLOR = new Color32(255, 204, 90, 255);
-
+        
         static void Prefix(SpellVessel __instance, CastSpell ___SpellSource, ref Stats ___targ)
         {
             if (!___SpellSource.isPlayer) return;
@@ -206,64 +204,6 @@ namespace Arcanism.Patches
                 allTargs = new List<Character>() { ___targ.Myself };
 
             allTargs.Do(t => t.GetComponentInChildren<SpellTargetIndicator>()?.AddTargetSource(__instance));
-
-            /*foreach (var t in allTargs)
-            {
-                if (t != null)
-                {
-                    var indicator = t.GetComponent<SpellTargetIndicator>();
-                    if (indicator != null)
-                    {
-
-                    }
-                }
-                if (t == null || t.IsDead())
-                {
-                    if (targetIndicatorByTarget.TryGetValue(t, out var indicator))
-                    {
-                        GameObject.Destroy(indicator.gameObject);
-                        targetIndicatorByTarget.Remove(t);
-                    }
-                    continue;
-                }
-
-                if (targetIndicatorByTarget.ContainsKey(t))
-                    continue;
-
-                var npc = t.GetComponent<NPC>();
-                if (npc != null)
-                {
-                    var indicator = new GameObject("SpellIndicator").AddComponent<SpriteRenderer>();
-                    indicator.gameObject.AddComponent<FaceCamera>();
-                    indicator.transform.SetParent(npc.transform);
-                    indicator.transform.localPosition = npc.NamePlate.transform.localPosition + Vector3.up * .6f;
-                    indicator.sprite = Main.miscSpritesByName["target_indicator"];
-                    indicator.color = INDICATOR_COLOR;
-                    indicator.transform.rotation = Quaternion.identity;  
-                    indicator.transform.localScale = new Vector3(0.45f, 0.45f, 1);
-                    targetIndicatorByTarget.Add(t, indicator);
-                    
-                }
-            }*/
-
-
-            
-        }
-    }
-
-    [HarmonyPatch(typeof(SpellVessel), "OnDestroy")]
-    class SpellVessel_OnDestroy
-    {
-        static void Postfix(CastSpell ___SpellSource)
-        {
-            if (!___SpellSource.isPlayer) return;
-
-            /*
-            foreach(var entry in SpellVessel_Update.targetIndicatorByTarget)
-            {
-                GameObject.Destroy(entry.Value?.gameObject);
-            }
-            SpellVessel_Update.targetIndicatorByTarget.Clear();*/
         }
     }
 }

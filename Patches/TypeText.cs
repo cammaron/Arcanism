@@ -9,7 +9,7 @@ using Arcanism.Skills;
 namespace Arcanism.Patches
 {
 	[HarmonyPatch(typeof(TypeText), "CheckCommands")]
-	public class TypeTextCheckCommandsPatch
+	public class TypeText_CheckCommands
 	{
 		static Spell testSpell = null;
 
@@ -260,7 +260,7 @@ namespace Arcanism.Patches
             {
 				Main.LoadSprites();
 				ItemDatabase_Start.RefreshSprites();
-				SkillDBStartPatch.RefreshSprites();
+				SkillDB_Start.RefreshSprites();
 				return false;
             }
 			else if (lowerTxt.StartsWith("/arc.item")) //  for changing item appearance.   /arc.item Item_Name_With_Underscores_Not_Spaces (SettingType) (SettingValue)
@@ -405,7 +405,7 @@ namespace Arcanism.Patches
 			if (lowerTxt.StartsWith("/arc.twincd")) //    /arc.twincd  cooldown     -- change cooldown for Twin Spell skill
             {
 				int cooldownSeconds = int.Parse(txt.Split(' ')[1]);
-				GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.TWIN_SPELL_SKILL_ID).Cooldown = cooldownSeconds * 60f;
+				GameData.SkillDatabase.GetSkillByID(SkillDB_Start.TWIN_SPELL_SKILL_ID).Cooldown = cooldownSeconds * 60f;
 				UpdateSocialLog.LogAdd("Twin Spell cooldown changed to " + cooldownSeconds);
 				return false;
             }
@@ -413,7 +413,7 @@ namespace Arcanism.Patches
 			if (lowerTxt.StartsWith("/arc.chantcd")) //    /arc.chantcd  cooldown     -- change cooldown for Control Chant skill
 			{
 				int cooldownSeconds = int.Parse(txt.Split(' ')[1]);
-				GameData.SkillDatabase.GetSkillByID(SkillDBStartPatch.CONTROL_CHANT_SKILL_ID).Cooldown = cooldownSeconds * 60f;
+				GameData.SkillDatabase.GetSkillByID(SkillDB_Start.CONTROL_CHANT_SKILL_ID).Cooldown = cooldownSeconds * 60f;
 				UpdateSocialLog.LogAdd("Control Chant cooldown changed to " + cooldownSeconds);
 				return false;
 			}
