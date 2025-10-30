@@ -353,6 +353,9 @@
     <Compile Include="FaceCamera.cs" />
     <Compile Include="HealthBar.cs" />
     <Compile Include="ItemIconVisuals.cs" />
+    <Compile Include="Patches\PlayerControl.cs" />
+    <Compile Include="Patches\Smithing.cs" />
+    <Compile Include="Patches\TradeWindow.cs" />
     <Compile Include="Patches\HotkeyManager.cs" />
     <Compile Include="Patches\Item.cs" />
     <Compile Include="Patches\ItemIcon.cs" />
@@ -368,7 +371,7 @@
     <Compile Include="SkillExtension\IRetargetingSkill.cs" />
     <Compile Include="Patches\Hotkeys.cs" />
     <Compile Include="Patches\Inventory.cs" />
-    <Compile Include="Patches\ItemDatabasePatch.cs" />
+    <Compile Include="Patches\ItemDatabase.cs" />
     <Compile Include="Patches\LootTable.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="Patches\SkillDB.cs" />

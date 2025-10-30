@@ -10,8 +10,10 @@ namespace Arcanism.Patches
 
 		static void Postfix(ItemInfoWindow __instance, Item item, int _quantity)
 		{
-			UpdateSocialLog.LogAdd("Displaying item " + item.ItemName + " with quantity " + _quantity);
-			if (item.Aura == null && item.TeachSpell == null && item.TeachSkill == null && item.RequiredSlot != Item.SlotType.General)
+			if (item.ItemValue > 0 && !item.NoTradeNoDestroy)
+				__instance.itemPrice.text = ItemExtensions.GetRealValue(item, _quantity).ToString();
+
+			if (item.IsUpgradeableEquipment())
             {
 				switch (ItemExtensions.GetBlessLevel(_quantity))
 				{

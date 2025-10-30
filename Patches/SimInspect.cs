@@ -8,14 +8,8 @@ namespace Arcanism.Patches
 {
     static class SimGearUpgradeFixes
     {
-        public struct UpgradeMeta
-        {
-            public SimInvSlot slot;
-            public ItemExtensions.Quality quality;
-            public int originalQuantity;
-        }
-
-        public static void PrepForUpgrade(SimInspect inspector, ref UpgradeMeta __state)
+        
+        public static void PrepForUpgrade(SimInspect inspector, ref OriginalItemMeta<SimInvSlot> __state)
         {
             var slot = GetSlotForUpgrade(inspector);
             if (slot == null)
@@ -23,16 +17,15 @@ namespace Arcanism.Patches
                 __state = default;
                 return;
             }
-            
-            __state = new UpgradeMeta() { slot = slot, quality = GetQualityLevel(slot.Quant), originalQuantity = slot.Quant };
-            slot.Quant = ToOriginalBlessLevel(slot.Quant);
+
+            __state = RevertQuantity(slot, ref slot.Quant);
         }
 
-        public static void RestoreAfterUpgrade(SimInspect inspector, UpgradeMeta __state)
+        public static void RestoreAfterUpgrade(SimInspect inspector, OriginalItemMeta<SimInvSlot> __state)
         {
-            if (__state.slot == default) return;
+            if (__state.itemRef == default) return;
 
-            __state.slot.Quant = ToNewQuantity(__state.slot.Quant, __state.quality);
+            RestoreQuantity(__state, ref __state.itemRef.Quant);
             inspector.InspectSim(GameData.InspectSim.Who); // upgrade methods call this to refresh data, but it's called before I've re-fixed quantity, so needs calling again.
         }
 
@@ -51,12 +44,12 @@ namespace Arcanism.Patches
     [HarmonyPatch(typeof(SimInspect), nameof(SimInspect.OfferSivaks))]
     class SimInspect_OfferSivaks
     { 
-        static void Prefix(SimInspect __instance, ref SimGearUpgradeFixes.UpgradeMeta __state)
+        static void Prefix(SimInspect __instance, ref OriginalItemMeta<SimInvSlot> __state)
         {
             SimGearUpgradeFixes.PrepForUpgrade(__instance, ref __state);
         }
 
-        static void Postfix(SimInspect __instance, SimGearUpgradeFixes.UpgradeMeta __state)
+        static void Postfix(SimInspect __instance, OriginalItemMeta<SimInvSlot> __state)
         {
             SimGearUpgradeFixes.RestoreAfterUpgrade(__instance, __state);
         }
@@ -65,12 +58,12 @@ namespace Arcanism.Patches
     [HarmonyPatch(typeof(SimInspect), nameof(SimInspect.OfferPlanar))]
     class SimInspect_OfferPlanar
     {
-        static void Prefix(SimInspect __instance, ref SimGearUpgradeFixes.UpgradeMeta __state)
+        static void Prefix(SimInspect __instance, ref OriginalItemMeta<SimInvSlot> __state)
         {
             SimGearUpgradeFixes.PrepForUpgrade(__instance, ref __state);
         }
 
-        static void Postfix(SimInspect __instance, SimGearUpgradeFixes.UpgradeMeta __state)
+        static void Postfix(SimInspect __instance, OriginalItemMeta<SimInvSlot> __state)
         {
             SimGearUpgradeFixes.RestoreAfterUpgrade(__instance, __state);
         }

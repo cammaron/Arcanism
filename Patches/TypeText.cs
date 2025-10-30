@@ -48,15 +48,28 @@ namespace Arcanism.Patches
 			var lowerTxt = txt.ToLower();
 
 			var stats = GameData.PlayerStats;
-
-			if (lowerTxt.StartsWith("/arc.simupgrade") || lowerTxt.StartsWith("/arc.upgradesim"))
+			if (lowerTxt.StartsWith("/arc.youreaflamewellharry")) // ... worth it
 			{
-				var sim = GameData.InspectSim?.Who;
+				UpdateSocialLog.LogAdd("Current target: " + GameData.PlayerControl.CurrentTarget);
+				var npc = GameData.PlayerControl.CurrentTarget?.GetComponent<Character>();
+				if (npc == null)
+				{
+					UpdateSocialLog.LogAdd("Target a non-sim NPC first.");
+					return false;
+				}
+				var oldName = npc.gameObject.name;
+				npc.gameObject.name = "Braxonian Flame Well";
+				UpdateSocialLog.LogAdd($"{oldName} renamed to {npc.gameObject.name}. You really are hacking a sim to be a flame well, aren't you? Kind of cruel, really.");
+				return false;
+			}
+			else if (lowerTxt.StartsWith("/arc.simupgrade") || lowerTxt.StartsWith("/arc.upgradesim"))
+			{
+				var sim = GameData.PlayerControl.CurrentTarget.GetComponent<SimPlayer>();
 				if (sim == null)
-                {
+				{
 					UpdateSocialLog.LogAdd("Target a sim first.");
 					return false;
-                }
+				}
 				sim.NearFlamewell = true;
 				sim.NearForge = true;
 				GameData.SimMngr.Sims[GameData.InspectSim.Who.myIndex].Sivaks = 25;
@@ -68,7 +81,7 @@ namespace Arcanism.Patches
 			{
 				Character target = GameData.PlayerControl.CurrentTarget;
 				if (target == null)
-                {
+				{
 					UpdateSocialLog.LogAdd("Target an enemy first.");
 					return false;
 				}
@@ -80,10 +93,10 @@ namespace Arcanism.Patches
 				var lootTable = target.GetComponent<LootTable>();
 				lootTable.ActualDrops.Clear();
 				lootTable.ActualDropsQual.Clear();
-				foreach(var token in tokens)
-                {
+				foreach (var token in tokens)
+				{
 					if (token.StartsWith("item"))
-                    {
+					{
 						string name = token.Split('=')[1];
 						string lowerName = name.ToLower().Replace('_', ' ');
 						requireItem = true;
@@ -95,10 +108,10 @@ namespace Arcanism.Patches
 						}
 					}
 					else if (token.Contains("bless"))
-                    {
+					{
 						requireItem = true;
 						blessing = ItemExtensions.Blessing.BLESSED;
-                    }
+					}
 					else if (token == "superior")
 					{
 						requireItem = true;
@@ -110,7 +123,7 @@ namespace Arcanism.Patches
 						quality = ItemExtensions.Quality.MASTERWORK;
 					} else if (token == "map")
 						lootTable.ActualDrops.Add(GameData.GM.Maps[0]);
-					else if (token == "sivak")
+					else if (token == "sivak" || token == "siva")
 						lootTable.ActualDrops.Add(GameData.GM.Sivak);
 					else if (token == "charm")
 						lootTable.ActualDrops.Add(GameData.GM.WorldDropMolds[Random.Range(0, GameData.GM.WorldDropMolds.Count)]);
@@ -139,7 +152,7 @@ namespace Arcanism.Patches
 					helper.itemMeta[0] = (item, blessing, quality);
 				UpdateSocialLog.LogAdd("Updated target's loot table.");
 				return false;
-			} else if (lowerTxt.StartsWith("/arc.ps"))
+			} else if (lowerTxt.StartsWith("/arc.ps")) // Particle System manipulation, various options below
             {
 				if (ps != null) GameObject.Destroy(ps.gameObject);
 				ps = GameObject.Instantiate(GameData.GM.SpecialLootBeam, GameData.PlayerControl.Myself.transform.position + Vector3.forward * 3f + Vector3.up, Quaternion.identity).GetComponent<ParticleSystem>();
@@ -229,20 +242,53 @@ namespace Arcanism.Patches
 					UpdateSocialLog.LogAdd($"No item found for ID {id}");
 				return false;
 			}
-			else if (lowerTxt.StartsWith("/arc.item.add"))
+			else if (lowerTxt.StartsWith("/arc.item.search")) // look up IDs of all items with name containing arg
 			{
-				var tokens = lowerTxt.Split(' ');
 				string name = txt.Split('"')[1];
 				string lowerName = name.ToLower();
-				Item item = GameData.ItemDB.ItemDBList.Find(i => i.ItemName.ToLower().StartsWith(lowerName));
-				if (item == null)
-				{
-					UpdateSocialLog.LogAdd($"No item found with name '{name}'. Provide item name in quotation marks (case insensitive)");
-					return false;
+				UpdateSocialLog.LogAdd("Search results for " + name + " (note: case insensitive, all items name contains string, use quotation marks)");
+				foreach(var item in GameData.ItemDB.ItemDBList.FindAll(i => i.ItemName.ToLower().Contains(lowerName)))
+                {
+					UpdateSocialLog.LogAdd($"[{item.Id}] {item.ItemName} - {item.RequiredSlot}");
 				}
 
-				GameData.PlayerInv.AddItemToInv(item);
-				UpdateSocialLog.LogAdd($"Added {name} to inventory.");
+				return false;
+			}
+			else if (lowerTxt.StartsWith("/arc.item.add"))
+			{
+				string[] tokens;
+				Item item;
+				if (!txt.Contains("\""))
+				{
+					// then maybe we're adding by ID
+					tokens = lowerTxt.Split(' ');
+					string id = tokens[1];
+					item = GameData.ItemDB.GetItemByID(id);
+					if (item == null)
+                    {
+						UpdateSocialLog.LogAdd($"No item found with ID '{id}'. NB syntax is either `/arc.item.add \"name in quotes\" qty` or `/arc.item.add id qty`. Qty is optional.");
+						return false;
+                    }
+				} else
+                {
+					tokens = lowerTxt.Split('"');
+					string name = tokens[1];
+					string lowerName = name.ToLower();
+					item = GameData.ItemDB.ItemDBList.Find(i => i.ItemName.ToLower() == (lowerName));
+					if (item == null)
+					{
+						UpdateSocialLog.LogAdd($"No item found with name '{name}'.  NB syntax is either `/arc.item.add \"name in quotes\" qty` or `/arc.item.add id qty`. Qty is optional.");
+						return false;
+					}
+				}
+
+				foreach (var t in tokens) UpdateSocialLog.LogAdd("TOKENS: " + t);
+				int qty;
+				if (!(tokens.Length == 3 && int.TryParse(tokens[2], out qty)))
+					qty = 1;
+
+				GameData.PlayerInv.AddItemToInv(item, qty);
+				UpdateSocialLog.LogAdd($"Added {item.ItemName} to inventory.");
 				return false;
 			}
 			if (lowerTxt.StartsWith("/arc.items"))

@@ -33,7 +33,7 @@ namespace Arcanism
             Blessing blessLevel;
             Quality quality;
 
-            if (item == null || item.RequiredSlot == Item.SlotType.General || item.RequiredSlot == Item.SlotType.Aura)
+            if (item == null || !item.IsUpgradeableEquipment())
             {
                 blessLevel = Blessing.NONE;
                 quality = Quality.NORMAL;

@@ -86,7 +86,7 @@ namespace Arcanism
             
             foreach(var item in lootTable.ActualDrops)
             {
-                if (!IsRegularEquipment(item))
+                if (!item.IsUpgradeableEquipment())
                 {
                     itemMeta.Add((item, Blessing.NONE, Quality.NORMAL));
                     continue;
@@ -225,7 +225,7 @@ namespace Arcanism
                 var blessLevel = meta.Item2;
                 var quality = meta.Item3;
 
-                if (!IsRegularEquipment(item))
+                if (!item.IsUpgradeableEquipment())
                     continue;
 
                 slot.Quantity = (int) blessLevel + (int) quality;
@@ -233,11 +233,6 @@ namespace Arcanism
                 if (i < lootTable.qualUps.Count) // qualUps appears to be used as a cache for blessing status per item if loot window has been opened before.
                     lootTable.qualUps[i] = slot.Quantity;
             }
-        }
-
-        protected bool IsRegularEquipment(Item item)
-        {
-            return (item.RequiredSlot != Item.SlotType.General && item.RequiredSlot != Item.SlotType.Aura && item.RequiredSlot != Item.SlotType.Charm);
         }
 
         protected bool ShouldBless()

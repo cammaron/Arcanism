@@ -31,6 +31,72 @@ namespace Arcanism.Patches
 			MASTERWORK = 3
 		}
 
+		public static bool IsUpgradeableEquipment(this Item i)
+        {
+			return (i.RequiredSlot != Item.SlotType.General && i.RequiredSlot != Item.SlotType.Aura && i.RequiredSlot != Item.SlotType.Charm);
+		}
+
+		public static int GetRealValue(Item i, int quantity)
+        {
+			if (!IsUpgradeableEquipment(i))
+				return i.ItemValue;
+
+			float mod = 1f;
+			switch(GetBlessLevel(quantity))
+            {
+				case Blessing.BLESSED:
+					mod += 2.5f;
+					break;
+				case Blessing.GODLY:
+					mod += 5;
+					break;
+				case Blessing.NONE:
+				default:
+					break;
+            }
+			switch(GetQualityLevel(quantity))
+            {
+				case Quality.JUNK:
+					mod *= .4f;
+					break;
+				case Quality.SUPERIOR:
+					mod *= 1.5f;
+					break;
+				case Quality.MASTERWORK:
+					mod *= 3f;
+					break;
+
+				case Quality.NORMAL:
+				default:
+					break;
+			}
+
+			return Mathf.RoundToInt(i.ItemValue * mod);
+        }
+
+		public readonly struct OriginalItemMeta<T>
+		{
+			public readonly T itemRef;
+			public readonly Quality quality;
+
+			public OriginalItemMeta (T itemRef, Quality quality) {
+				this.itemRef = itemRef;
+				this.quality = quality;
+			}
+		}
+
+		public static OriginalItemMeta<T> RevertQuantity<T>(T itemRef, ref int itemQuantity)
+        {
+			int originalQuantity = itemQuantity;
+			itemQuantity = ToOriginalBlessLevel(itemQuantity);
+
+			return new OriginalItemMeta<T>(itemRef, GetQualityLevel(originalQuantity));
+        }
+
+		public static void RestoreQuantity<T>(OriginalItemMeta<T> originalData, ref int itemQuantity) {
+			itemQuantity = ToNewQuantity(itemQuantity, originalData.quality);
+		}
+
 		public static bool IsItemQualityUpdated(int quantity)
         {
 			return quantity >= (int)Blessing.NONE;
