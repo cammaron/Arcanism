@@ -46,7 +46,10 @@ namespace Arcanism
             // This is to ensure any existing NPCs have the requisite hover UI even after a hot reload
             foreach(var npc in FindObjectsOfType<NPC>())
             {
-                npc.gameObject.AddComponent<CharacterHoverUI>();
+                npc.gameObject.GetOrAddComponent<CharacterHoverUI>();
+                var lootHelper = npc.gameObject.GetOrAddComponent<LootHelper>();
+                lootHelper.lootTable = npc.GetComponent<LootTable>();
+                lootHelper.UpdateLootQuality();
             }
         }
 
@@ -71,6 +74,8 @@ namespace Arcanism
             DestroyAllOfType<CooldownManager>();
             DestroyAllOfType<ExtendedSkill>();
             DestroyAllOfType<CharacterHoverUI>();
+            DestroyAllOfType<ItemIconVisuals>();
+            DestroyAllOfType<LootHelper>();
 
             BepInEx.Logging.Logger.Sources?.Remove(Log);
             harmonyPatcher?.UnpatchSelf();
@@ -164,6 +169,13 @@ namespace Arcanism
 
         public static bool KnowsSkill(this UseSkill mySkills, string skillId) => mySkills.KnownSkills.Find(ks => ks.Id == skillId) != null;
         public static bool KnowsSkill(this UseSkill mySkills, Skill skill) => mySkills.KnowsSkill(skill.Id);
+
+        public static T GetOrAddComponent<T>(this GameObject gameObject) where T : Component
+        {
+            var c = gameObject.GetComponent<T>();
+            if (c == null) c = gameObject.AddComponent<T>();
+            return c;
+        }
 
         /* Quick hack: wanna be able to manually tweak DmgPops without messing up the pool, so this clones and returns one which gets cleaned up after.
          * Obviously, only for sporadic use considering from a performance perspective it defeats the purpose of the pool.

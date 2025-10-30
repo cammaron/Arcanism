@@ -2,53 +2,77 @@
 using System.Collections.Generic;
 using UnityEngine;
 using HarmonyLib;
+using static Arcanism.Patches.ItemExtensions;
 
 namespace Arcanism.Patches
 {
-    
-    [HarmonyPatch(typeof(SimInspect), nameof(SimInspect.OfferSivaks))]
-    class SimInspect_OfferSivaks
+    static class SimGearUpgradeFixes
     {
-        struct UpgradeMeta
+        public struct UpgradeMeta
         {
             public SimInvSlot slot;
             public ItemExtensions.Quality quality;
             public int originalQuantity;
         }
 
-        // In prefix, revert item quantity to original (pre-quality changes) to let original game logic run
-        static void Prefix(SimInspect __instance, ref UpgradeMeta __state)
+        public static void PrepForUpgrade(SimInspect inspector, ref UpgradeMeta __state)
         {
-            var slot = GetSlotForUpgrade(__instance);
+            var slot = GetSlotForUpgrade(inspector);
             if (slot == null)
             {
                 __state = default;
                 return;
             }
-
-            __state = new UpgradeMeta() { slot = slot, quality = ItemExtensions.GetQualityLevel(slot.Quant), originalQuantity = slot.Quant };
-            slot.Quant = (int)ItemExtensions.GetBlessLevel(slot.Quant) + 1;
+            
+            __state = new UpgradeMeta() { slot = slot, quality = GetQualityLevel(slot.Quant), originalQuantity = slot.Quant };
+            slot.Quant = ToOriginalBlessLevel(slot.Quant);
         }
 
-        // Add preserved quality level back into quantity
-        static void Postfix(SimInspect __instance, UpgradeMeta __state)
+        public static void RestoreAfterUpgrade(SimInspect inspector, UpgradeMeta __state)
         {
             if (__state.slot == default) return;
 
-            
+            __state.slot.Quant = ToNewQuantity(__state.slot.Quant, __state.quality);
+            inspector.InspectSim(GameData.InspectSim.Who); // upgrade methods call this to refresh data, but it's called before I've re-fixed quantity, so needs calling again.
         }
 
         static SimInvSlot GetSlotForUpgrade(SimInspect __instance)
         {
             foreach (SimInvSlot simInvSlot in GameData.InspectSim.Who.MyEquipment)
             {
-                if (simInvSlot.MyItem.Id == __instance.AdjustSlot.MyItem.Id && simInvSlot.Quant == __instance.AdjustSlot.ItemLvl)
-                {
+                if (simInvSlot.MyItem.Id == __instance.AdjustSlot.MyItem.Id && ToOriginalBlessLevel(simInvSlot.Quant) == __instance.AdjustSlot.ItemLvl)
                     return simInvSlot;
-                }
             }
 
             return null;
+        }
+    }
+    /* In both cases of upgrading to blessed or godly, we want to simplify by regressing item quantity to original value in prefix, then re-converting to appropriate bless quantity and re-adding in quality in postfix */
+    [HarmonyPatch(typeof(SimInspect), nameof(SimInspect.OfferSivaks))]
+    class SimInspect_OfferSivaks
+    { 
+        static void Prefix(SimInspect __instance, ref SimGearUpgradeFixes.UpgradeMeta __state)
+        {
+            SimGearUpgradeFixes.PrepForUpgrade(__instance, ref __state);
+        }
+
+        static void Postfix(SimInspect __instance, SimGearUpgradeFixes.UpgradeMeta __state)
+        {
+            SimGearUpgradeFixes.RestoreAfterUpgrade(__instance, __state);
+        }
+    }
+
+    [HarmonyPatch(typeof(SimInspect), nameof(SimInspect.OfferPlanar))]
+    class SimInspect_OfferPlanar
+    {
+        static void Prefix(SimInspect __instance, ref SimGearUpgradeFixes.UpgradeMeta __state)
+        {
+            SimGearUpgradeFixes.PrepForUpgrade(__instance, ref __state);
+        }
+
+        static void Postfix(SimInspect __instance, SimGearUpgradeFixes.UpgradeMeta __state)
+        {
+            SimGearUpgradeFixes.RestoreAfterUpgrade(__instance, __state);
         }
     }
 }

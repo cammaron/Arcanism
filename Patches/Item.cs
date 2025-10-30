@@ -49,6 +49,16 @@ namespace Arcanism.Patches
 			return Blessing.NONE;
 		}
 
+		public static int ToOriginalBlessLevel(int quantity)
+        {
+			return (int)GetBlessLevel(quantity) / 10;
+        }
+
+		public static int ToNewQuantity(int ogBlessLevel, Quality quality)
+        {
+			return (int)GetBlessLevel(ogBlessLevel) + (int) quality;
+		}
+
 		public static Quality GetQualityLevel(int quantity)
 		{
 			if (!IsItemQualityUpdated(quantity)) return Quality.NORMAL; // An item that hasn't been processed -- dropped prior to Arcanism installation
@@ -113,7 +123,19 @@ namespace Arcanism.Patches
 
 		static bool Prefix(Item __instance, ref int __result, int _stat, int _qual)
 		{
-			int res = _stat + (int)ItemExtensions.GetBlessLevel(_qual);
+			/*if (__instance.RequiredSlot == Item.SlotType.Charm)
+			{
+				var bless = ItemExtensions.GetBlessLevel(_qual);
+				if (bless == ItemExtensions.Blessing.BLESSED)
+					_stat = 1;
+				else if (bless == ItemExtensions.Blessing.GODLY)
+					_stat = 2;
+
+				__result = _stat;
+				return false;
+			}*/
+
+			int res = _stat + (ItemExtensions.ToOriginalBlessLevel(_qual) - 1);
 			switch (ItemExtensions.GetQualityLevel(_qual))
 			{
 				case ItemExtensions.Quality.JUNK:
@@ -136,8 +158,19 @@ namespace Arcanism.Patches
 	public class Item_CalcStat
 	{
 
-		static bool Prefix(ref int __result, int _stat, int _qual)
+		static bool Prefix(Item __instance, ref int __result, int _stat, int _qual)
 		{
+			/*if (__instance.RequiredSlot == Item.SlotType.Charm)
+            {
+				var bless = ItemExtensions.GetBlessLevel(_qual);
+				if (bless == ItemExtensions.Blessing.BLESSED)
+					_stat = 8;
+				else if (bless == ItemExtensions.Blessing.GODLY)
+					_stat = 16;
+
+				__result = _stat;
+				return false;
+			}*/
 			float mod = ItemExtensions.GetMod(_qual);
 			__result = Mathf.RoundToInt(_stat * mod);
 			return false;
@@ -148,7 +181,7 @@ namespace Arcanism.Patches
 	public class Item_CalcACHPMC
 	{
 
-		static bool Prefix(ref int __result, int _stat, int _qual)
+		static bool Prefix(Item __instance, ref int __result, int _stat, int _qual)
 		{
 			float mod = ItemExtensions.GetMod(_qual, .5f);
 			__result = Mathf.RoundToInt(_stat * mod);

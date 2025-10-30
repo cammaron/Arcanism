@@ -352,11 +352,15 @@
     <Compile Include="CharacterHoverUI.cs" />
     <Compile Include="FaceCamera.cs" />
     <Compile Include="HealthBar.cs" />
+    <Compile Include="ItemIconVisuals.cs" />
     <Compile Include="Patches\HotkeyManager.cs" />
     <Compile Include="Patches\Item.cs" />
+    <Compile Include="Patches\ItemIcon.cs" />
     <Compile Include="Patches\ItemInfoWindow.cs" />
     <Compile Include="Patches\LootWindow.cs" />
     <Compile Include="Patches\SimInspect.cs" />
+    <Compile Include="Patches\SimItemDisplay.cs" />
+    <Compile Include="Patches\SimSelectorSlot.cs" />
     <Compile Include="Patches\WandBolt.cs" />
     <Compile Include="Skills\ControlChant.cs" />
     <Compile Include="CooldownManager.cs" />
@@ -365,7 +369,7 @@
     <Compile Include="Patches\Hotkeys.cs" />
     <Compile Include="Patches\Inventory.cs" />
     <Compile Include="Patches\ItemDatabasePatch.cs" />
-    <Compile Include="Patches\LootTablePatch.cs" />
+    <Compile Include="Patches\LootTable.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="Patches\SkillDBPatch.cs" />
     <Compile Include="Patches\SpellDBPatch.cs" />

@@ -16,6 +16,8 @@ namespace Arcanism.Patches
 		static Item lastItemEdit = null;
 		static string lastItemSetting = null;
 
+		static ParticleSystem ps;
+
 		/* Custom commands to assist with testing */
 		static bool Prefix(Text ___typed)
 		{
@@ -47,13 +49,170 @@ namespace Arcanism.Patches
 
 			var stats = GameData.PlayerStats;
 
-
-			if (lowerTxt.StartsWith("/arc.quality"))
+			if (lowerTxt.StartsWith("/arc.simupgrade") || lowerTxt.StartsWith("/arc.upgradesim"))
 			{
-				int factor = int.Parse(txt.Split(' ')[1]);
-				LootHelper.QUALITY_CHANCE_FACTOR = factor;
+				var sim = GameData.InspectSim?.Who;
+				if (sim == null)
+                {
+					UpdateSocialLog.LogAdd("Target a sim first.");
+					return false;
+                }
+				sim.NearFlamewell = true;
+				sim.NearForge = true;
+				GameData.SimMngr.Sims[GameData.InspectSim.Who.myIndex].Sivaks = 25;
+				GameData.SimMngr.Sims[GameData.InspectSim.Who.myIndex].Planars = 25;
+				UpdateSocialLog.LogAdd("Adding sivaks/planars to sim and triggering 'near forge/near flamewell.'");
 				return false;
 			}
+			else if (lowerTxt.StartsWith("/arc.loot"))
+			{
+				Character target = GameData.PlayerControl.CurrentTarget;
+				if (target == null)
+                {
+					UpdateSocialLog.LogAdd("Target an enemy first.");
+					return false;
+				}
+				string[] tokens = lowerTxt.Split(' ');
+				bool requireItem = false;
+				Item item = null;
+				ItemExtensions.Blessing blessing = ItemExtensions.Blessing.NONE;
+				ItemExtensions.Quality quality = ItemExtensions.Quality.NORMAL;
+				var lootTable = target.GetComponent<LootTable>();
+				lootTable.ActualDrops.Clear();
+				lootTable.ActualDropsQual.Clear();
+				foreach(var token in tokens)
+                {
+					if (token.StartsWith("item"))
+                    {
+						string name = token.Split('=')[1];
+						string lowerName = name.ToLower().Replace('_', ' ');
+						requireItem = true;
+						item = GameData.ItemDB.ItemDBList.Find(i => i.ItemName.ToLower().StartsWith(lowerName));
+						if (item == null)
+						{
+							UpdateSocialLog.LogAdd($"No item found with name '{lowerName}'. Replace spaces with underscores!! (case insensitive)");
+							return false;
+						}
+					}
+					else if (token.Contains("bless"))
+                    {
+						requireItem = true;
+						blessing = ItemExtensions.Blessing.BLESSED;
+                    }
+					else if (token == "superior")
+					{
+						requireItem = true;
+						quality = ItemExtensions.Quality.SUPERIOR;
+					}
+					else if (token == "masterwork")
+					{
+						requireItem = true;
+						quality = ItemExtensions.Quality.MASTERWORK;
+					} else if (token == "map")
+						lootTable.ActualDrops.Add(GameData.GM.Maps[0]);
+					else if (token == "sivak")
+						lootTable.ActualDrops.Add(GameData.GM.Sivak);
+					else if (token == "charm")
+						lootTable.ActualDrops.Add(GameData.GM.WorldDropMolds[Random.Range(0, GameData.GM.WorldDropMolds.Count)]);
+					else if (token == "xppot")
+						lootTable.ActualDrops.Add(GameData.GM.XPPot);
+					else if (token == "diamond")
+						lootTable.ActualDrops.Add(GameData.GM.InertDiamond);
+					else if (token == "shard")
+						lootTable.ActualDrops.Add(GameData.GM.PlanarShard);
+					else if (token == "planar")
+						lootTable.ActualDrops.Add(GameData.GM.Planar);
+				}
+
+				if (requireItem)
+                {
+					UpdateSocialLog.LogAdd("Adding item " + item + " to target loot table");
+					if (item == null) item = GameData.ItemDB.GetItemByID(ItemId.ARMBANDS_OF_ORDER);
+					lootTable.ActualDrops.Insert(0, item);
+                }
+				
+				lootTable.ActualDropsQual = new List<int>(lootTable.ActualDrops.Count);
+				var helper = lootTable.GetComponent<LootHelper>();
+				helper.UpdateLootQuality();
+
+				if (requireItem)
+					helper.itemMeta[0] = (item, blessing, quality);
+				UpdateSocialLog.LogAdd("Updated target's loot table.");
+				return false;
+			} else if (lowerTxt.StartsWith("/arc.ps"))
+            {
+				if (ps != null) GameObject.Destroy(ps.gameObject);
+				ps = GameObject.Instantiate(GameData.GM.SpecialLootBeam, GameData.PlayerControl.Myself.transform.position + Vector3.forward * 3f + Vector3.up, Quaternion.identity).GetComponent<ParticleSystem>();
+				
+				var emission = ps.emission;
+				ps.startSize = 5;
+				var main = ps.main;
+				var sizeLifetime = ps.sizeOverLifetime;
+				sizeLifetime.enabled = true;
+				var colorLifetime = ps.colorOverLifetime;
+				colorLifetime.enabled = true;
+				var rotationLifetime = ps.rotationOverLifetime;
+				main.duration = 1000000;
+				main.prewarm = true;
+				//main.startRotationZMultiplier = main.startRotationYMultiplier = main.startRotationXMultiplier = 1;
+				rotationLifetime.enabled = true; rotationLifetime.separateAxes = true;
+				rotationLifetime.y = rotationLifetime.x = rotationLifetime.z = 0f;
+				rotationLifetime.y = 5f;
+				main.simulationSpeed = 1;
+				main.startLifetime = 5;
+				emission.rateOverTime = 4;//ps.emissionRate = 4;
+				colorLifetime.color = new ParticleSystem.MinMaxGradient(new Color32(200, 200, 255, 30), new Color32(200, 200, 255, 30));
+				ps.transform.localScale = new Vector3(1, 1, 1);
+				var tokens = lowerTxt.Substring(8).Split(' ');
+				foreach(var token in tokens)
+                {
+					var subtokens = token.Split('=');
+					var key = subtokens[0];
+					if (key == "scale")
+                    {
+						var subs = subtokens[1].Split(',');
+						ps.transform.localScale = new Vector3(float.Parse(subs[0]), float.Parse(subs[1]), float.Parse(subs[0]));
+					}
+					else if (float.TryParse(subtokens[1], out float val))
+                    {
+						if (key == "rate")
+							emission.rateOverTime = val;
+						else if (key == "speed")
+							main.simulationSpeed = val;
+						else if (key == "size")
+							sizeLifetime.size = val;
+						else if (key == "lifetime")
+							main.startLifetime = val;
+						else if (key == "sizelifex")
+							sizeLifetime.x = new ParticleSystem.MinMaxCurve(sizeLifetime.size.constant, val);
+						else if (key == "sizelifey")
+							sizeLifetime.y = new ParticleSystem.MinMaxCurve(sizeLifetime.size.constant, val);
+						else if (key == "sizelifez")
+							sizeLifetime.z = new ParticleSystem.MinMaxCurve(sizeLifetime.size.constant, val);
+						else if (key == "rotationx")
+							rotationLifetime.x = val;
+						else if (key == "rotationy")
+							rotationLifetime.y = val;
+						else if (key == "rotationz")
+							rotationLifetime.z = val;
+						else if (key == "rotationstartx")
+							main.startRotationX = new ParticleSystem.MinMaxCurve(0, val);
+						else if (key == "rotationstarty")
+							main.startRotationY = new ParticleSystem.MinMaxCurve(1, AnimationCurve.Linear(0, 0, 3, 90));
+						else if (key == "rotationstartz")
+							main.startRotationZ = new ParticleSystem.MinMaxCurve(0, val);
+					} else
+                    {
+						var colorTokens = subtokens[1].Split('-');
+						var color = new Color32(byte.Parse(colorTokens[0]), byte.Parse(colorTokens[1]), byte.Parse(colorTokens[2]), byte.Parse(colorTokens[3]));
+						if (key == "colorstart")
+							colorLifetime.color = new ParticleSystem.MinMaxGradient(color, colorLifetime.color.colorMax);
+						else if (key == "colorend")
+							colorLifetime.color = new ParticleSystem.MinMaxGradient(colorLifetime.color.colorMin, color);
+					}
+                }
+				UpdateSocialLog.LogAdd("Made PS with args " + lowerTxt);
+            }
 			else if (lowerTxt.StartsWith("/arc.refresh"))
 			{
 				ItemDatabase_Start.UpdateItemDatabase(GameData.ItemDB);
@@ -71,7 +230,7 @@ namespace Arcanism.Patches
 				return false;
 			}
 			else if (lowerTxt.StartsWith("/arc.item.add"))
-            {
+			{
 				var tokens = lowerTxt.Split(' ');
 				string name = txt.Split('"')[1];
 				string lowerName = name.ToLower();

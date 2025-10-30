@@ -8,7 +8,7 @@ namespace Arcanism.Patches
 
     /* Delegating bless/quality determination to a new MonoBehaviour so I can keep stateful data without guesswork */
     [HarmonyPatch(typeof(LootTable), "InitLootTable")]
-    public class LootTableInitLootTablePatch
+    public class LootTable_InitLootTable
     {
 
         static void Prefix(LootTable __instance)
@@ -21,7 +21,7 @@ namespace Arcanism.Patches
 
         static void Postfix(LootTable __instance)
         {
-            __instance.special = __instance.GetComponent<LootHelper>().UpdateLootQuality();
+            __instance.GetComponent<LootHelper>().UpdateLootQuality();
         }
     }
 }

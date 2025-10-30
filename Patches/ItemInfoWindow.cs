@@ -10,6 +10,7 @@ namespace Arcanism.Patches
 
 		static void Postfix(ItemInfoWindow __instance, Item item, int _quantity)
 		{
+			UpdateSocialLog.LogAdd("Displaying item " + item.ItemName + " with quantity " + _quantity);
 			if (item.Aura == null && item.TeachSpell == null && item.TeachSkill == null && item.RequiredSlot != Item.SlotType.General)
             {
 				switch (ItemExtensions.GetBlessLevel(_quantity))
@@ -49,10 +50,8 @@ namespace Arcanism.Patches
 						break;
 				}
 
-				if (prefix != null) __instance.ItemName.text = $"<line-height=32><size=15><color={prefixColor}>[{prefix}]\n</color></size></line-height><size=20>{item.ItemName}</size>";
+				if (prefix != null) __instance.ItemName.text = $"<line-height=23><size=13><color={prefixColor}>{prefix}\n</color></size></line-height><size=20>{item.ItemName}</size>";
 			}
-
-			
 		}
 	}
 }
