@@ -364,6 +364,7 @@
     <Compile Include="Patches\SimInspect.cs" />
     <Compile Include="Patches\SimItemDisplay.cs" />
     <Compile Include="Patches\SimSelectorSlot.cs" />
+    <Compile Include="Patches\VendorWindow.cs" />
     <Compile Include="Patches\WandBolt.cs" />
     <Compile Include="Skills\ControlChant.cs" />
     <Compile Include="CooldownManager.cs" />

@@ -11,7 +11,7 @@ namespace Arcanism.Patches
 		static void Postfix(ItemInfoWindow __instance, Item item, int _quantity)
 		{
 			if (item.ItemValue > 0 && !item.NoTradeNoDestroy)
-				__instance.itemPrice.text = ItemExtensions.GetRealValue(item, _quantity).ToString();
+				__instance.itemPrice.text = item.GetRealValue(_quantity).ToString();
 
 			if (item.IsUpgradeableEquipment())
             {

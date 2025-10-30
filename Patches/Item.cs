@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 using HarmonyLib;
-using System.Collections.Generic;
-using System.Reflection.Emit;
+using System.Globalization;
 
 namespace Arcanism.Patches
 {
@@ -36,42 +35,58 @@ namespace Arcanism.Patches
 			return (i.RequiredSlot != Item.SlotType.General && i.RequiredSlot != Item.SlotType.Aura && i.RequiredSlot != Item.SlotType.Charm);
 		}
 
-		public static int GetRealValue(Item i, int quantity)
+		public static string GetNameWithQuality(this Item i, int quantity)
+        {
+			var qual = GetQualityLevel(quantity);
+			if (qual == Quality.NORMAL) return i.ItemName;
+
+
+			string qualString = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(qual.ToString());
+
+			return $"{qualString} {i.ItemName}";
+        }
+
+		public static int GetRealValue(this Item i, int quantity)
         {
 			if (!IsUpgradeableEquipment(i))
 				return i.ItemValue;
 
-			float mod = 1f;
+		
+			float auctionlessPriceMod = 5f; // because blessed/qual items can't be sold on AH, in addition to being worth more in general, something close to the price you'd get on the AH is baked into their vendor sale value
+			float baseValueMod;
 			switch(GetBlessLevel(quantity))
             {
 				case Blessing.BLESSED:
-					mod += 2.5f;
+					baseValueMod = 2f;
 					break;
 				case Blessing.GODLY:
-					mod += 5;
+					baseValueMod = 4f;
 					break;
 				case Blessing.NONE:
 				default:
+					baseValueMod = 1f;
 					break;
             }
 			switch(GetQualityLevel(quantity))
             {
 				case Quality.JUNK:
-					mod *= .4f;
+					baseValueMod *= .5f;
 					break;
 				case Quality.SUPERIOR:
-					mod *= 1.5f;
+					baseValueMod *= 1.5f;
 					break;
 				case Quality.MASTERWORK:
-					mod *= 3f;
+					baseValueMod *= 3f;
 					break;
-
 				case Quality.NORMAL:
 				default:
 					break;
 			}
 
-			return Mathf.RoundToInt(i.ItemValue * mod);
+			if (baseValueMod > 1) // if value has been pumped, it's because it's not listable on AH, so also apply the AHless price mod
+				baseValueMod *= auctionlessPriceMod;
+
+			return Mathf.FloorToInt(i.ItemValue * baseValueMod);
         }
 
 		public readonly struct OriginalItemMeta<T>
