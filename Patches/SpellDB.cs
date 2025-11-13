@@ -171,7 +171,7 @@ namespace Arcanism.Patches
 			funeralPyre.ChargeSound = weightOfSea.ChargeSound;
 			funeralPyre.CompleteSound = weightOfSea.CompleteSound;
 			funeralPyre.color = new Color32(137, 16, 130, 255);
-			UpdateTargetSpell(__instance, INFERNIS_SPELL_ID, 1500, 1500, 1.5f, 3, 30).Line = Spell.SpellLine.Arc_Element_DOT; // Infernis
+			UpdateTargetSpell(__instance, INFERNIS_SPELL_ID, 800, 1250, 1f, 2.5f, 30).Line = Spell.SpellLine.Arc_Element_DOT; // Infernis
 			UpdateTargetSpell(__instance, "10644536", 0, 1800, 0, 0, 18); // Linfering Inferno
 
 			var parasiticTwin = GameObject.Instantiate(funeralPyre); // Basically just copy Funeral Pyre since they're both void DoTs
