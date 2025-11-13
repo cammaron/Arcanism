@@ -73,7 +73,7 @@ namespace Arcanism.Patches
 				"Having achieved new levels of the meditative trance-like state entered during chant control, your chance of an early release spell backfiring is reduced."));
 
 			var twinSpell = CreateSkill(controlChant, TWIN_SPELL_SKILL_ID, "Twin Spell", 10, Skill.SkillType.Other,
-				"While channeling a DAMAGE SPELL, target another enemy and activate this skill to split your mind in two and duplicate your channeling, not only doubling your chant speed but also hitting both targets with the full power of the spell!", 120f);
+				$"While channeling a DAMAGE SPELL, target another enemy and activate this skill to split your mind in two and duplicate your channeling, not only doubling your chant speed but also hitting both targets with the full power of the spell! Twinning a spell costs {Mathf.RoundToInt(TwinSpell.FIRST_TWIN_MANA_COST * 100f)}% more mana.", 120f);
 			skillsToAdd.Add(twinSpell);
 			TwinSpell.CreateExtension(twinSpell); 
 			
@@ -81,13 +81,13 @@ namespace Arcanism.Patches
 				"<size=15>By releasing your spell with perfect timing around the standard cast time, you find you can reap the benefits of both worlds: the full damage of an over-chant, with zero cooldown or mana cost like an early release. Perfect Release also doesn't apply cooldown to Control Chant. However, the concentration required exhausts you, so this can only be done every 120 seconds.</size>"));
 
 			skillsToAdd.Add(CreateSkill(controlChant, TWIN_SPELL_MASTERY_SKILL_ID, "Twin Spell Mastery I", 15, Skill.SkillType.Innate,
-				"Magic feels as natural as breathing to you. Your trained mind can split a second time while casting, re-doubling your chant speed and allowing you to twin to an additional target."));
+				$"Magic feels as natural as breathing to you. Your trained mind can split a second time while casting, re-doubling your chant speed and allowing you to twin to an additional target at the cost of {Mathf.RoundToInt(TwinSpell.ADDITIONAL_TWIN_MANA_COST * 100f)}% more mana."));
 
 			skillsToAdd.Add(CreateSkill(controlChant, VANISHING_TWIN_SKILL_ID, "Vanishing Twin", 17, Skill.SkillType.Innate,
 				"If a target dies before your Twin Spell finishes, you can redirect the energy to the next available target, hitting them with the force of multiple spells."));
 
 			skillsToAdd.Add(CreateSkill(controlChant, TIME_IS_POWER_2_SKILL_ID, "Time is Power II", 19, Skill.SkillType.Innate,
-				"With great strain, you find you can reach a deeper reserve of power and extend your chant even further, increasing its power but with even greater mana cost and therefore risk of backfire. This additional window doesn't increase your spell cooldown further."));
+				"<size=15>With great strain, you find you can reach a deeper reserve of power and extend your chant even further, increasing its power but with far greater mana cost and therefore risk of backfire. This additional window doesn't increase your spell cooldown further, but it also doesn't factor into Perfect Release damage.</size>"));
 
 			skillsToAdd.Add(CreateSkill(controlChant, EXPERT_CONTROL_2_SKILL_ID, "Expert Control II", 21, Skill.SkillType.Innate,
 				"Your very consciousness dissolves and mingles with the aether when chanting, reflecting your growing skill in weaving magic. Your early release spells are even less likely to backfire, and half spell damage is dealt to the enemy even when you backfire."));
@@ -102,7 +102,7 @@ namespace Arcanism.Patches
 				$"You fondly remember back to when you first learned to extend your chants, and how exhausting it was, causing long spell cooldowns. You've come so far since then, and these days it doesn't increase your spell's cooldown time at all."));
 
 			skillsToAdd.Add(CreateSkill(controlChant, TWIN_SPELL_MASTERY_2_SKILL_ID, "Twin Spell Mastery II", 30, Skill.SkillType.Innate,
-				"You're beginning to wield the boundless powers of an archmage, and splitting your mind a third time no longer seems the impossibility it once was. You may target a 4th enemy with Twin Spell, doubling your chant speed once again."));
+				$"You're beginning to wield the boundless powers of an archmage, and splitting your mind a third time no longer seems the impossibility it once was. You may target a 4th enemy with Twin Spell, doubling your chant speed once again, at the cost of {Mathf.RoundToInt(TwinSpell.ADDITIONAL_TWIN_MANA_COST * 100f)}% more mana."));
 
 			skillsToAdd.Add(CreateSkill(controlChant, PERFECT_RELEASE_2_SKILL_ID, "Perfect Release II", 32, Skill.SkillType.Innate,
 				"While a perfect release exhausts your mind, the moment of extreme clarity also gives you an adrenaline rush, completely resetting the cooldown for the Twin Spell skill."));

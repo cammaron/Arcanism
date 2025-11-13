@@ -82,7 +82,7 @@ namespace Arcanism
                 if (lastShieldAmount > 0)
                 {
                     // Then we've just broken or effect giving shield has ended!
-                    stats.Myself.MyAudio.PlayOneShot(Main.sfxByName["shield-shatter"], GameData.SFXVol * 1f);
+                    stats.Myself.MyAudio.PlayOneShot(Main.sfxByName["shield-shatter"], GameData.SFXVol * 1.25f);
                     shatterEndTime = Time.time + shatterDuration;
                     stats.Myself.MyHurtSound = baseHurtSound;
                 }
@@ -108,15 +108,21 @@ namespace Arcanism
                     shield.transform.localScale = baseScale;
                     fullCapacity = stats.SpellShield;
                     shatterEndTime = 0f;
-                    stats.Myself.MyHurtSound = Main.sfxByName["shield-hit-medium"];
+                    stats.Myself.MyHurtSound = null;
                 }
 
                 if (stats.SpellShield != lastShieldAmount) // deliberately also playing this animation on turning on
                 {
                     flashEndTime = Time.time + flashDuration; // one flash may interrupt another
 
-                    if (stats.SpellShield < fullCapacity * .35f)
-                        stats.Myself.MyHurtSound = Main.sfxByName["shield-hit-hard"];
+                    if(stats.SpellShield < lastShieldAmount)
+                    {
+                        AudioClip hitSound = Main.sfxByName["shield-hit-medium"];
+                        if (stats.SpellShield < fullCapacity * .35f)
+                            hitSound = Main.sfxByName["shield-hit-hard"];
+                        stats.Myself.MyAudio.PlayOneShot(hitSound, GameData.SFXVol * .8f);
+                    }
+                    
 
                     float reductionFactor = 1f - ((float)stats.SpellShield / fullCapacity);
                     currentDamagedColor = Color.Lerp(baseColor, Color.red, reductionFactor);

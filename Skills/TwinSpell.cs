@@ -10,7 +10,10 @@ namespace Arcanism.Skills
 {
     class TwinSpell : ExtendedSkill, IRetargetingSkill, ISpellDamageModifier
     {
-        public static bool AllowSameTarget = false;
+        public const float FIRST_TWIN_MANA_COST = .5f;  // 1st twin target costs 50% extra mana on top of base spell
+        public const float ADDITIONAL_TWIN_MANA_COST = .1f; // additional extra targets cost 10% each, so way more cost effective the more targets.
+
+        public static bool AllowSameTarget = false; // just for dev testing ;)
 
         private Traverse<Stats> vesselTargetField;
         private Traverse<float> vesselEffectLifeField;
@@ -24,7 +27,7 @@ namespace Arcanism.Skills
         bool appliedParasiticTwin = false;
         bool isFinished = false;
 
-        HashSet<Character> npcsDiedWhileCasting;
+        HashSet<Character> npcsDiedWhileCasting = new HashSet<Character>();
 
         AudioSource audio;
         ColorGrading colorGrading;
@@ -107,6 +110,21 @@ namespace Arcanism.Skills
             if (caster.MySkills.isPlayer && Time.time >= showTextUntilTime)
                 GameData.CB.OCTxt.transform.gameObject.SetActive(false);
 
+            if (!hasAttacked)
+            {
+                foreach (var target in allTargets)
+                {
+                    if (IsTargetDead(target) && !npcsDiedWhileCasting.Contains(target))
+                    {
+                        npcsDiedWhileCasting.Add(target);
+                        if (caster.MySkills.KnowsSkill(SkillDB_Start.VANISHING_TWIN_SKILL_ID))
+                        {
+                            GameData.Misc.CreateDmgPopClone("VANISHED!", target.transform).Num.color = Color.magenta;
+                            UpdateSocialLog.LogAdd($"You channel the magic from {target.MyStats.MyName}'s dead body to the next living twin!", "#" + ColorUtility.ToHtmlStringRGB(Color.magenta));
+                        }
+                    }
+                }
+            }
         }
 
         protected void FixedUpdate()
@@ -156,7 +174,7 @@ namespace Arcanism.Skills
                 ((caster, vessel, target) => target != null && target != caster,                                                                "Invalid target!"),
                 ((caster, vessel, target) => caster.GetComponent<ControlChant>() == null,                                                       "Cannot be used while controlling a chant."),
                 ((caster, vessel, target) => AllowSameTarget || !allTargets.Contains(target),                                                   "Cannot be used on the same target twice."),
-                //((caster, vessel, target) => caster.MyStats.GetCurrentMana() - vessel.spell.ManaCost >= GetNextTargetManaCost(),                "You need more mana!"),
+                ((caster, vessel, target) => caster.MyStats.GetCurrentMana() - vessel.spell.ManaCost >= GetNextTargetManaCost(),                "You need more mana!"),
                 ((caster, vessel, target) => CanAddMoreTargets(),                                                                               "Unable to twin this spell any further."),
                 ((caster, vessel, target) => vessel.spell.SpellRange >= Vector3.Distance(caster.transform.position, target.transform.position), "Target is too far away!"),
             };
@@ -175,11 +193,32 @@ namespace Arcanism.Skills
 
             if (caster.MySkills.isPlayer)
             {
+                string text;
+                switch(allTargets.Count)
+                {
+                    case 2:
+                        text = "Twinned!";
+                        break;
+                    case 3:
+                        text = "TRIPLED!";
+                        break;
+                    case 4:
+                        text = "FULL STACK!!";
+                        break;
+                    default:
+                        text = "ERROR"; // all cases should have been handled
+                        break;
+                }
+                var dmgPop = GameData.Misc.CreateDmgPopClone(text, target.transform);
+                dmgPop.Num.color = Color.magenta;
+
                 UpdateSocialLog.LogAdd($"Twinning spell to {target.name} (target {allTargets.Count}/{maxTargets})");
-                GameData.CB.OCTxt.text = allTargets.Count == 2 ? "-Twinned!-" : allTargets.Count == 3 ? "-TRIPLED!-" : "-FULL STACK!!-";
+                GameData.CB.OCTxt.text = $"-{text}-";
                 GameData.CB.OCTxt.transform.gameObject.SetActive(true);
                 GameData.CB.OCTxt.fontSize = 48;
                 showTextUntilTime = Time.time + 1f;
+
+                GameData.CB.SetSubtext($"DMG {Mathf.RoundToInt(GetSiblingSynergyMulti() * 100f)}%", $"{allTargets.Count}/{maxTargets}");
 
                 if (CanAddMoreTargets())
                 {
@@ -209,24 +248,36 @@ namespace Arcanism.Skills
             }
         }
 
+        public float GetSiblingSynergyMulti()
+        {
+            if (caster.MySkills.KnowsSkill(SkillDB_Start.SIBLING_SYNGERY_SKILL_ID))
+                return 1f + (SkillDB_Start.SIBLING_SYNERGY_POWER * allTargets.Count);
+            return 1f;
+        }
+
         public float GetSpellDamageMulti()
         {
             float multi = 1;
             if (!hasAttacked) // This being called means SpellVessel is about to begin cycling targets. Whoever is already dead has died not by this spell's hand, so we process them for Vanishing Twin.
             {
-                npcsDiedWhileCasting = new HashSet<Character>(allTargets.FindAll(t => t == IsTargetDead(t)));
-                
-                if (caster.MySkills.KnowsSkill(SkillDB_Start.VANISHING_TWIN_SKILL_ID))
+                if (npcsDiedWhileCasting.Count > 0 && caster.MySkills.KnowsSkill(SkillDB_Start.VANISHING_TWIN_SKILL_ID))
+                {
                     multi += npcsDiedWhileCasting.Count;
+                    var remainingTarget = allTargets.Find(t => !IsTargetDead(t));
+                    if (remainingTarget != null)
+                    {
+                        UpdateSocialLog.LogAdd($"{target.MyStats.MyName} receives {multi}x damage from Vanishing Twin!", "#" + ColorUtility.ToHtmlStringRGB(Color.magenta));
+                        GameData.Misc.CreateDmgPopClone("x" + multi + "!!!", target.transform).Num.color = Color.magenta;
+                    }
+                }
 
                 GameData.PlayerAud.PlayOneShot(Main.sfxByName["twin-release"]);
+                
             }
 
             hasAttacked = true;
 
-
-            if (caster.MySkills.KnowsSkill(SkillDB_Start.SIBLING_SYNGERY_SKILL_ID))
-                multi *= 1 + (SkillDB_Start.SIBLING_SYNERGY_POWER * allTargets.Count);
+            multi *= GetSiblingSynergyMulti();
 
             return multi;
         }
@@ -251,7 +302,7 @@ namespace Arcanism.Skills
 
         private void ApplyParasiticTwin()
         {
-            UpdateSocialLog.CombatLogAdd("The dead target's soul saps the life of those connected to it by Twin Spell!");
+            UpdateSocialLog.LogAdd($"Dead twins remain tethered to the living, draining their life force!", "#" + ColorUtility.ToHtmlStringRGB(Color.magenta));
             var parasiticTwinSpell = GameData.SpellDatabase.GetSpellByID(SpellDB_Start.PARASITIC_TWIN_SPELL_ID);
             // Parasitic Twin *has* no base target damage, thus all its damage is the "bonus damage" -- it's completely calculated by int/prof, scaling with character growth. With a max int around 353ish (before blessings) and max int prof, this will hit for 1700 base (*BASE*, as in, before other int/prof scaling increases it. so, same as damage listing on any spell desc)
             int baseDamage = Mathf.RoundToInt(caster.MyStats.GetCurrentInt() * 5 * (caster.MyStats.IntScaleMod / 40f));
@@ -260,15 +311,27 @@ namespace Arcanism.Skills
             foreach (var targ in allTargets)
             {
                 if (!IsTargetDead(targ))
+                {
                     targ.MyStats.AddStatusEffect(parasiticTwinSpell, caster.MySkills.isPlayer, modifiedDamage, caster);
+                    var dmgPop = GameData.Misc.CreateDmgPopClone("PARASITIC TWIN!", targ.transform);
+                    dmgPop.Num.color = Color.magenta;
+                }
             }
 
             appliedParasiticTwin = true;
         }
 
-        private int GetNextTargetManaCost()
+        private int GetNextTargetManaCost() // NB the next target is NOT in allTargets yet
         {
-            return 0; // Leaving the other code here in case I decide to rebalance this, but as of 04/11/2025 it seems like the mana cost made this skill undesirable to use, and the long cooldown already prevents it being OP
+            float factor;
+            if (allTargets.Count == 1)
+                factor = FIRST_TWIN_MANA_COST;
+            else
+                factor = ADDITIONAL_TWIN_MANA_COST;
+
+            return Mathf.RoundToInt(Vessel.spell.ManaCost * factor); // [2025/11/13] - changing from 0 to test new formula that makes mroe targets rewarding in terms of mana ratio
+            
+            // Leaving the other code here in case I decide to rebalance this, but as of 04/11/2025 it seems like the mana cost made this skill undesirable to use, and the long cooldown already prevents it being OP
             // 1.3x exponent means 15% more mana than 2 casts for 2 targets; 33% more for 3; 54% more for 4. Remember, that's 54% more than *4 casts* which is already a HUGE amount of mana usage.
             /*float costExponent = 1.3f * (1 - caster.MySkills.GetAscensionRank(SkillDB_Start.MIND_SPLIT_ASCENSION_ID) * SkillDB_Start.MIND_SPLIT_COST_FACTOR);
             int additionalManaCost = (int)(Mathf.Pow(costExponent, allTargets.Count) * vessel.spell.ManaCost);

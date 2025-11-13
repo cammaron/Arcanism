@@ -11,18 +11,22 @@ namespace Arcanism.Skills
     {
         // These values represent *additional* factors, i.e. a value of 0.5 means +50% compared to normal
         public static readonly float EXTRA_CAST_TIME_FACTOR = 0.6f;
-        public static readonly float EXTRA_MANA_COST_FACTOR = 0.6f;
-        public static readonly float EXTRA_DAMAGE_FACTOR = .8f; // So full overchant = 2x damage
-        public static readonly float EXTRA_COOLDOWN_FACTOR = 0.5f;
+        public static readonly float EXTRA_MANA_COST_FACTOR = 0.45f;
+        public static readonly float EXTRA_DAMAGE_FACTOR = .8f;
+        public static readonly float EXTRA_COOLDOWN_FACTOR = 0.75f;
 
         public static readonly float BEYOND_CHANT_CAST_TIME_FACTOR = 1f;
-        public static readonly float BEYOND_CHANT_DAMAGE_FACTOR = 0.1f;  // Multiplicative with the above factor -- so full Beyond Chant = 2.3x damage, but this is *mainly* about adding duration for the exponent...
-        public static readonly float BEYOND_CHANT_MANA_COST_FACTOR = .9f;
+        public static readonly float BEYOND_CHANT_DAMAGE_FACTOR = 0.25f;  // Multiplicative with total damage -- so (damage + (damage*EXTRA_DAMAGE_FACTOR)) * BEYOND_CHANT_DAMAGE_FACTOR
+        public static readonly float BEYOND_CHANT_MANA_COST_FACTOR = 1f;
 
-        public static readonly float TIME_IS_POWER_EXPONENT = 1.024f; // 2.4% extra damage per second chanting over 10 seconds. Factoring in OC+BC chant time, on a 5s spell this is a piddly 7
-        public static readonly float SECONDS_BEFORE_TIME_IS_POWER = 10f;
+        // 2.5% extra damage per second chanting over 6 seconds.
+        // For a 5s spell, before BC, this is 5% dmg increase. AFter BC, 18.8%.
+        // For a 6s spell, before BC, this is 9% dmg increase. AFter BC, 26%.
+        // For an 8s spell, before BC 18%. After, 44%.
+        public static readonly float TIME_IS_POWER_EXPONENT = 1.025f; 
+        public static readonly float SECONDS_BEFORE_TIME_IS_POWER = 6f;
 
-        public static readonly float PERFECT_RELEASE_TIMING_FACTOR = 0.03f;
+        public static readonly float PERFECT_RELEASE_TIMING_FACTOR = 0.022f; //.03f
 
         protected readonly static Color32 NORMAL_CAST_COLOR = new Color32(239, 18, 122, 255);
         protected readonly static Color32 PERFECT_RELEASE_COLOR = new Color32(255, 235, 72, 255); 
@@ -139,7 +143,7 @@ namespace Arcanism.Skills
 
                 expertControlPower = 0;
                 if (caster.MySkills.KnowsSkill(SkillDB_Start.EXPERT_CONTROL_SKILL_ID))
-                    expertControlPower += 2;
+                    expertControlPower += 1;
 
                 if (knowsExpertControl2)
                     expertControlPower += 2;
@@ -218,10 +222,12 @@ namespace Arcanism.Skills
                 if (manaDrainPerSecond > 0)
                 {
                     drainProgress += manaDrainPerSecond * Time.fixedDeltaTime; // mana is an int, so we build tiny increments per frame until we get a whole number to deduct
-                    if (drainProgress > 1f)
+                    if (drainProgress >= 1f)
                     {
-                        drainProgress -= 1f;
-                        caster.MyStats.ReduceMana(1);
+                        int manaReductionAmount = Mathf.FloorToInt(drainProgress);
+                        drainProgress -= manaReductionAmount;
+                        caster.MyStats.ReduceMana(manaReductionAmount);
+                        
                         if (caster.MyStats.CurrentMana <= Vessel.spell.ManaCost) // At least enough mana to finish casting the spell (which isn't deducted 'til execution time) must remain in the bank
                         {
                             Backfire(Vessel.spell.ManaCost + overchantTotalManaDrain); // NB we use the same backfire damage even if we're actually in a BEYOND chant
@@ -309,36 +315,18 @@ namespace Arcanism.Skills
                 UpdateDamageMulti();
                 UpdateCooldownMulti();
                 
-                var subtextObj = GameData.CB.GetSubtext();
-                subtextObj.transform.localPosition = Vector3.down * 20f;
-                subtextObj.rectTransform.sizeDelta = new Vector2(275, 10f);
-                subtextObj.fontSize = 15;
-                subtextObj.fontWeight = TMPro.FontWeight.Black;
-                subtextObj.horizontalAlignment = TMPro.HorizontalAlignmentOptions.Flush;
-
                 if (castBarState == CastBarState.PERFECT)
-                    subtextObj.color = PERFECT_RELEASE_COLOR;
+                    GameData.CB.GetSubtext().color = PERFECT_RELEASE_COLOR;
                 else
-                    subtextObj.color = Color.white;
+                    GameData.CB.GetSubtext().color = Color.white;
 
-                string leftVal;
-                string leftTerm;
-                
-                string rightVal = Mathf.RoundToInt(cooldownMulti * 100f).ToString();
-                string rightTerm = "CD";
-
+                string left;
                 if (castBarState == CastBarState.NORMAL)
-                {
-                    leftVal = Mathf.RoundToInt(CalculateBackfireChance()).ToString();
-                    leftTerm = "RISK";
-                }
+                    left = $"RISK {Mathf.RoundToInt(CalculateBackfireChance())}%";
                 else
-                {
-                    leftVal = Mathf.RoundToInt(damageMulti * 100).ToString();
-                    leftTerm = "DMG";
-                }
+                    left = $"DMG {Mathf.RoundToInt(damageMulti * 100)}%";
 
-                subtextObj.text = $"<align=left>{leftTerm} {leftVal}%</align><line-height=0>\r\n<align=right>{rightTerm} {rightVal}%</align></line-height>";
+                GameData.CB.SetSubtext(left, $"CD {Mathf.RoundToInt(cooldownMulti * 100f)}%");
             }
         }
 
@@ -366,7 +354,7 @@ namespace Arcanism.Skills
 
             float backfireChance = (1 - (castBarStateFactor)) * 100f;
             for(var i = 0; i < expertControlPower; i ++)
-                backfireChance = (backfireChance - 7.5f) * .85f; // Every Expert Control power level drops the backfire chance a fair bit. Previously 1st skill gave 1, 2nd gave 2. Just buffed it so both give 2, for 4 total. Menas with 25% cast progress, backfire chance is 19%. It's not as great as it sounds because backfires suck now.
+                backfireChance = (backfireChance - 7.5f) * .85f; // Every Expert Control power level drops the backfire chance a fair bit
 
             return Mathf.Max(0f, backfireChance);
         }
@@ -442,17 +430,10 @@ namespace Arcanism.Skills
                 case CastBarState.PERFECT: // lil cheeky recursion here, leveraging the relevant damage calc logic then swapping back to PERFECT
                     float origFactor = castBarStateFactor;
                     float origTimeSpentChanting = timeSpentChanting;
-                    // PERFECT release does full available damage -- as if you have a completed overchant bar, or if you've unlocked the beyond chanting (time is power 2), as if you've completed THAT.
+                    // PERFECT release does full Overcharge damage -- NOT including Beyond Chant. Beyond Chant is still the hardest hitter.
                     castBarStateFactor = 1f;
-                    if (knowsTimeIsPower2)
-                    {
-                        timeSpentChanting = beyondChantEndTime;
-                        castBarState = CastBarState.BEYOND;
-                    } else
-                    {
-                        timeSpentChanting = overchantEndTime;
-                        castBarState = CastBarState.OVER;
-                    }
+                    timeSpentChanting = overchantEndTime;
+                    castBarState = CastBarState.OVER;
                     UpdateDamageMulti();
 
                     timeSpentChanting = origTimeSpentChanting;

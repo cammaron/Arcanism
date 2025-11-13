@@ -19,6 +19,17 @@ namespace Arcanism.Patches
     {
         public const string SUBTEXT_NAME = "Subtext";
 
+        public static void SetSubtext(this CastBar cb, string left, string right)
+        {
+            var subtext = cb.GetSubtext();
+            subtext.transform.localPosition = Vector3.down * 20f;
+            subtext.rectTransform.sizeDelta = new Vector2(275, 10f);
+            subtext.fontSize = 15;
+            subtext.fontWeight = TMPro.FontWeight.Black;
+            subtext.horizontalAlignment = TMPro.HorizontalAlignmentOptions.Flush;
+            subtext.text = $"<align=left>{left}</align><line-height=0>\r\n<align=right>{right}</align></line-height>";
+        }
+
         public static TextMeshProUGUI GetSubtext(this CastBar cb)
         {
             foreach(var txt in cb.castBar.GetComponentsInChildren<TextMeshProUGUI>())
@@ -32,7 +43,9 @@ namespace Arcanism.Patches
             subtext.text = "";
             subtext.fontSize = 24;
             subtext.transform.localPosition += Vector3.down * .5f;
+            
             return subtext;
         }
+
     }
 }
