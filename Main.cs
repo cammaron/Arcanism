@@ -11,6 +11,9 @@ using System.Linq;
 using UnityEngine.SceneManagement;
 using Arcanism.Patches;
 using Arcanism.Skills;
+using BepInEx.Configuration;
+using UnityEngine.Networking;
+using BigDamage;
 
 namespace Arcanism
 {
@@ -25,16 +28,33 @@ namespace Arcanism
         internal static Dictionary<string, Sprite> itemSpriteById;
         internal static Dictionary<string, Sprite> skillSpriteById;
         internal static Dictionary<string, Sprite> miscSpritesByName;
+        internal static Dictionary<string, AudioClip> sfxByName;
+
+        internal static ConfigEntry<float> auctionHouseGreedFactor;
+        internal static ConfigEntry<int> minPricePerItemLevel;
+        internal static ConfigEntry<float> minPriceLevelExponent;
+
+        private const float DEFAULT_GREED_FACTOR = 1.4f;
+        private const int DEFAULT_MIN_PRICE_PER_ITEM_LEVEL = 180;
+        private const float DEFAULT_MIN_PRICE_LEVEL_EXPONENT = 1.04f;
 
         Harmony harmonyPatcher;
 
+        public static Main Instance { get; private set; }
+
         public void Awake()
         {
+            Instance = this;
+
             Log = base.Logger;
 
             Logger.LogInfo("Initialising.");
 
-            LoadSprites();
+            auctionHouseGreedFactor = Config.Bind("Auction House Changes", "greedFactor", DEFAULT_GREED_FACTOR, $"This multiplies the asking price of all goods in the Auction House. Its purpose is to make it a little less easy to buy equipment rather than farming it. Arcanism's default is {DEFAULT_GREED_FACTOR}.");
+            minPricePerItemLevel = Config.Bind("Auction House Changes", "minPricePerItemLevel", DEFAULT_MIN_PRICE_PER_ITEM_LEVEL, $"This, and the variable below, set a floor on base item prices for SimPlayer AH sale purposes, both to make the game more challenging and address pricing inconsistencies in some higher level items--especially if you're playing a lower level alt and the market is saturated with items you couldn't farm yet which were too easy to buy. This value sets an absolute base value per item level (e.g. a value of 200 per level on a level 10 item would cause a base price of 2000, then multiplied by Sim greed for AH sale). Arcanism's default is {DEFAULT_MIN_PRICE_PER_ITEM_LEVEL}.");
+            minPriceLevelExponent= Config.Bind("Auction House Changes", "minPriceLevelExponent", DEFAULT_MIN_PRICE_LEVEL_EXPONENT, $"This is an additional exponential modifier per item level to ensure prices scale up as they should. If the minPricePerItemLevel is 200, item level is 10, and minPriveLevelExponent is 1.1, the item's base price will effectively be 200 * 10 * 1.1 ^ 10 = 5187. Don't change this unless you understand the maths -- but it's fine to set to 1 if you don't want the prices jacked up! Arcanism's default is {DEFAULT_MIN_PRICE_LEVEL_EXPONENT}.");
+
+            LoadFiles();
             harmonyPatcher = new Harmony(PLUGIN_GUID);
             harmonyPatcher.PatchAll();
 
@@ -43,39 +63,55 @@ namespace Arcanism
             if (GameData.SkillDatabase != null && GameData.SkillDatabase.GetSkillByID(SkillDB_Start.TWIN_SPELL_SKILL_ID) != null)
                 TwinSpell.CreateExtension(GameData.SkillDatabase.GetSkillByID(SkillDB_Start.TWIN_SPELL_SKILL_ID));
 
-            // This is to ensure any existing NPCs have the requisite hover UI even after a hot reload
-            foreach(var npc in FindObjectsOfType<NPC>())
+
+            // Normally this would run before all the things in the world have spawned, but on a hot reload, their Start/Awake patches won't run due to already being spawned, so manually re-adding destroyed components
+            foreach (var stats in FindObjectsOfType<Stats>())
             {
-                npc.gameObject.GetOrAddComponent<CharacterHoverUI>();
-                var lootHelper = npc.gameObject.GetOrAddComponent<LootHelper>();
-                lootHelper.lootTable = npc.GetComponent<LootTable>();
-                lootHelper.UpdateLootQuality();
+                if (stats.Myself.isNPC)
+                {
+                    var npc = stats.Myself.MyNPC;
+                    npc.gameObject.GetOrAddComponent<CharacterUI.CharacterHoverUI>();
+                    var lootHelper = npc.gameObject.GetOrAddComponent<LootHelper>();
+                    lootHelper.lootTable = npc.gameObject.GetComponent<LootTable>();
+                    npc.gameObject.GetOrAddComponent<TheyMightBeGiants>();
+                }
+
+                var shield = stats.gameObject.GetOrAddComponent<SpellShieldVisual>();
+                shield.stats = stats;
+                shield.Init();
             }
+
+            if (GameData.ItemDB != null && GameData.ItemDB.GetItemByID(ItemId.VIZIERS_LAMENT) != null) // if a custom Arcanism item exists in DB at this point, it means we've hot reloaded, so must recreate sets
+                ItemDatabase_Start.RegisterSets(GameData.ItemDB);
         }
 
 #if DEBUG
-        bool done = false;
-        void Update()
-        {
-            if (done) return;
-            // Check if we are on the main menu before loading
-            if (SceneManager.GetActiveScene().name == "Menu")
-            {
-                Logger.LogInfo("** SKIPPING LOGIN SCREEN **"); // code nixed from another plugin just for quick testing, not part of Arcanism
-                SceneManager.LoadScene("LoadScene"); // <- Boom, straight to character selection!
-                Harmony.DEBUG = true;
-                done = true;
-            }
-        }
+        /* bool done = false;
+         void Update()
+         {
+             if (done) return;
+             // Check if we are on the main menu before loading
+             if (SceneManager.GetActiveScene().name == "Menu")
+             {
+                 Logger.LogInfo("** SKIPPING LOGIN SCREEN **"); // code nixed from another plugin just for quick testing, not part of Arcanism
+                 SceneManager.LoadScene("LoadScene"); // <- Boom, straight to character selection!
+                 Harmony.DEBUG = true;
+                 done = true;
+             }
+         }*/
 #endif
+
         void OnDestroy()
         {
             Logger?.LogInfo("Destroying Arcanism.");
             DestroyAllOfType<CooldownManager>();
             DestroyAllOfType<ExtendedSkill>();
-            DestroyAllOfType<CharacterHoverUI>();
+            DestroyAllOfType<CharacterUI.CharacterHoverUI>();
             DestroyAllOfType<ItemIconVisuals>();
             DestroyAllOfType<LootHelper>();
+            DestroyAllOfType<TheyMightBeGiants>();
+            DestroyAllOfType<SpellShieldVisual>();
+            Logger?.LogInfo("Destroyed components. Unpatching.");
 
             BepInEx.Logging.Logger.Sources?.Remove(Log);
             harmonyPatcher?.UnpatchSelf();
@@ -87,11 +123,12 @@ namespace Arcanism
                 Destroy(obj);
         }
 
-        public static void LoadSprites()
+        public void LoadFiles()
         {
             itemSpriteById = new Dictionary<string, Sprite>();
             skillSpriteById = new Dictionary<string, Sprite>();
             miscSpritesByName = new Dictionary<string, Sprite>();
+            sfxByName = new Dictionary<string, AudioClip>();
 
             string nestedAssetsPath = Path.Combine(Paths.PluginPath, "Arcanism", "Assets");
             string rootAssetsPath = Path.Combine(Paths.PluginPath, "Assets"); // check the root plugins folder in case Arcanism wasn't placed in its own folder
@@ -102,13 +139,14 @@ namespace Arcanism
                 assetsPath = rootAssetsPath;
             else
             {
-                Main.Log.LogError($"Assets folder not found at {nestedAssetsPath} or {rootAssetsPath}. Ensure you've fully installed the mod!");
+                Log.LogError($"Assets folder not found at {nestedAssetsPath} or {rootAssetsPath}. Ensure you've fully installed the mod!");
                 return;
             }
 
             LoadSpriteSet(assetsPath, "Items", itemSpriteById);
             LoadSpriteSet(assetsPath, "Skills", skillSpriteById);
             LoadSpriteSet(assetsPath, "Misc", miscSpritesByName);
+            StartCoroutine(LoadSounds(assetsPath));
         }
 
         private static void LoadSpriteSet(string assetsPath, string spriteSet, Dictionary<string, Sprite> map)
@@ -123,12 +161,43 @@ namespace Arcanism
                 var texture = new Texture2D(default, default);
                 texture.LoadImage(imageData);
 
-                var sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+                var sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect);
                 
                 foreach(var id in ids)
                     map.Add(id, sprite);
             }
-            Main.Log.LogInfo($"Loaded {map.Count} sprites for {spriteSet}.");
+            Log.LogInfo($"Loaded {map.Count} sprites for {spriteSet}.");
+        }
+
+        private IEnumerator LoadSounds(string assetsPath)
+        {
+            string soundsPath = Path.Combine(assetsPath, "Sounds");
+            string[] filePaths = Directory.GetFiles(soundsPath);
+            Log.LogInfo("Found " + filePaths.Length + " sound files in path " + soundsPath);
+            foreach (var filePath in filePaths)
+            {
+                string soundName = Path.GetFileNameWithoutExtension(filePath);
+                string extension = Path.GetExtension(filePath);
+                AudioType audioType;
+                
+                if (extension.ToLower().EndsWith("wav")) // I am suuuuuure there's a better existing API for working out the audiotype automatically by looking at the file's encoding but I ain't got time to find that rn
+                    audioType = AudioType.WAV;
+                else 
+                    audioType = AudioType.MPEG;
+
+                var fileUri = "file:///" + filePath.Replace('\\', '/');
+                using (var www = UnityWebRequestMultimedia.GetAudioClip(fileUri, audioType))
+                {
+                    yield return www.SendWebRequest();
+                    if (www.result == UnityWebRequest.Result.Success)
+                    {
+                        sfxByName[soundName] = DownloadHandlerAudioClip.GetContent(www);
+                        Log.LogInfo("Loaded sound file: " + soundName);
+                    }
+                    else
+                        Log.LogError("Error occurred loading sound file at " + filePath + ". Response was " + www.result + " and error message was " + www.error);
+                }
+            }
         }
     }
 
@@ -175,6 +244,29 @@ namespace Arcanism
             var c = gameObject.GetComponent<T>();
             if (c == null) c = gameObject.AddComponent<T>();
             return c;
+        }
+
+        public static int DestroyAllChildren(this Transform t)
+        {
+            int count = t.childCount;
+            for (var i = 0; i < t.childCount; i++)
+            {
+                GameObject.Destroy(t.GetChild(i).gameObject);
+            }
+
+            return count;
+        }
+
+        public static bool DestroyIfPresent<T>(this Transform t) where T : Component
+        {
+            var toBeEviscerated = t.GetComponent<T>();
+            if (toBeEviscerated != null)
+            {
+                GameObject.Destroy(toBeEviscerated);
+                return true;
+            }
+
+            return false;
         }
 
         /* Quick hack: wanna be able to manually tweak DmgPops without messing up the pool, so this clones and returns one which gets cleaned up after.

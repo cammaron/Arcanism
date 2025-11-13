@@ -11,39 +11,78 @@ namespace Arcanism.Skills
     {
         // These values represent *additional* factors, i.e. a value of 0.5 means +50% compared to normal
         public static readonly float EXTRA_CAST_TIME_FACTOR = 0.6f;
-        public static readonly float EXTRA_MANA_COST_FACTOR = 1.5f;
-        public static readonly float EXTRA_DAMAGE_FACTOR = 1f;
+        public static readonly float EXTRA_MANA_COST_FACTOR = 0.6f;
+        public static readonly float EXTRA_DAMAGE_FACTOR = .8f; // So full overchant = 2x damage
         public static readonly float EXTRA_COOLDOWN_FACTOR = 0.5f;
-        private readonly static Color32 PERFECT_RELEASE_COLOR = new Color32(255, 215, 0, 255);
 
-        private enum State
+        public static readonly float BEYOND_CHANT_CAST_TIME_FACTOR = 1f;
+        public static readonly float BEYOND_CHANT_DAMAGE_FACTOR = 0.1f;  // Multiplicative with the above factor -- so full Beyond Chant = 2.3x damage, but this is *mainly* about adding duration for the exponent...
+        public static readonly float BEYOND_CHANT_MANA_COST_FACTOR = .9f;
+
+        public static readonly float TIME_IS_POWER_EXPONENT = 1.024f; // 2.4% extra damage per second chanting over 10 seconds. Factoring in OC+BC chant time, on a 5s spell this is a piddly 7
+        public static readonly float SECONDS_BEFORE_TIME_IS_POWER = 10f;
+
+        public static readonly float PERFECT_RELEASE_TIMING_FACTOR = 0.03f;
+
+        protected readonly static Color32 NORMAL_CAST_COLOR = new Color32(239, 18, 122, 255);
+        protected readonly static Color32 PERFECT_RELEASE_COLOR = new Color32(255, 235, 72, 255); 
+        protected readonly static Color32 OVER_CAST_COLOR = new Color32(178, 72, 250, 255);
+        protected readonly static Color32 BEYOND_CHANT_COLOR = new Color32(6, 227, 250, 255);
+
+        protected enum State
         {
             INITIALISING,
             ACTIVATED,
-            FAILED,
+            LOCKED,
             FINISHED
         }
 
-        private State state;
-        private Stats spellTarget;
+        protected enum CastBarState
+        {
+            NORMAL,
+            PERFECT,
+            OVER,
+            BEYOND
+        }
+
+        protected State state;
+        protected CastBarState castBarState = CastBarState.NORMAL;
+        protected float castBarStateFactor;
 
         Traverse<float> effectLife;
-        Traverse<float> totalLife;
-        Traverse<float> overChantLifeField;
         Traverse<float> overChantTotalField;
+        Traverse<float> maxCastTime;
+        Traverse<Transform> npcCastBarField;
 
-        private int totalManaDrain;
-        private float manaDrainPerSecond;
-        private float drainProgress = 0f;
+        protected float timeSpentChanting;
+        protected float normalCastEndTime;
+        protected float overchantEndTime;
+        protected float beyondChantEndTime;
+        protected (float start, float end) perfectReleaseTiming;
 
-        private float damageMulti = 1f;
-        private float cooldownMulti = 1f;
+        protected float beyondChantManaDrainPerSecond;
 
-        private Image castBar;
-        private Image overchantBar;
-        private Color originalCBColor;
-        private Color originalOverchantColor;
-        private Spell exhaustionEffect;
+        protected int overchantTotalManaDrain;
+        protected float overchantManaDrainPerSecond;
+        protected float drainProgress = 0f;
+
+        protected float damageMulti = 1f;
+        protected float cooldownMulti = 1f;
+        protected bool playingChargeSound;
+        protected bool hasPlayedPerfectReleaseChime;
+
+        protected Image castBar;
+        protected Image overchantBar;
+        protected Spell exhaustionEffect;
+
+        protected AudioSource chargeAudioSource;
+
+        protected bool knowsPerfectRelease1;
+        protected bool knowsTimeIsPower1;
+        protected bool knowsTimeIsPower2;
+        protected bool knowsTimeIsPower3;
+        protected bool knowsExpertControl2;
+        protected int expertControlPower;
 
         public static void CreateExtension(Skill coreSkill)
         {
@@ -56,21 +95,15 @@ namespace Arcanism.Skills
                     component.state = State.INITIALISING;
                     component.skill = coreSkill;
                     component.caster = caster;
-                    component.vessel = vessel;
+                    component.Vessel = vessel;
 
                     if (vessel != null)
                     {
                         var vesselTraversal = Traverse.Create(vessel);
-                        component.spellTarget = vesselTraversal.Field<Stats>("targ").Value;
                         component.effectLife = vesselTraversal.Field<float>("EffectLife");
-                        component.totalLife = vesselTraversal.Field<float>("totalLife");
-                        component.overChantLifeField = vesselTraversal.Field<float>("overChantLife");
+                        component.maxCastTime = vesselTraversal.Field<float>("maxTime");
                         component.overChantTotalField = vesselTraversal.Field<float>("overChantTotal");
-
-                        // For overchanting, we now drain additional mana per second to sustain the process, making it powerful but a little less cost effective -- though ideal for things with high cooldown or for pre-casting
-                        // A full overchant should drain an additional 150% of the spell's normal mana cost for up to 100% more damage
-                        component.totalManaDrain = Mathf.RoundToInt(vessel.spell.ManaCost * (1 + EXTRA_MANA_COST_FACTOR));
-                        component.manaDrainPerSecond = component.totalManaDrain / (component.overChantTotalField.Value / 60f); //    The "/ 60f" is because SpellChargeTime/castTime/overChantTotal is measured in 60ths of a second
+                        component.npcCastBarField = vesselTraversal.Field<Transform>("CastBar");
                     }
 
                 }
@@ -97,95 +130,277 @@ namespace Arcanism.Skills
             // so... just leaving this blank for now?
             if (state == State.INITIALISING)
             {
-                overChantTotalField.Value = vessel.spell.SpellChargeTime * EXTRA_CAST_TIME_FACTOR;
+                // The skill lookups are inefficient due to being lists rather than sets, so caching knowledge that might otherwise have to be done per frame
+                knowsPerfectRelease1 = caster.MySkills.KnowsSkill(SkillDB_Start.PERFECT_RELEASE_SKILL_ID);
+                knowsTimeIsPower1 = caster.MySkills.KnowsSkill(SkillDB_Start.TIME_IS_POWER_SKILL_ID);
+                knowsTimeIsPower2 = caster.MySkills.KnowsSkill(SkillDB_Start.TIME_IS_POWER_2_SKILL_ID);
+                knowsTimeIsPower3 = caster.MySkills.KnowsSkill(SkillDB_Start.TIME_IS_POWER_3_SKILL_ID);
+                knowsExpertControl2 = caster.MySkills.KnowsSkill(SkillDB_Start.EXPERT_CONTROL_2_SKILL_ID);
+
+                expertControlPower = 0;
+                if (caster.MySkills.KnowsSkill(SkillDB_Start.EXPERT_CONTROL_SKILL_ID))
+                    expertControlPower += 2;
+
+                if (knowsExpertControl2)
+                    expertControlPower += 2;
+
+                // First, establish where we're at in the cast process and the various cast thresholds
+                timeSpentChanting = effectLife.Value;
+
+                normalCastEndTime = Vessel.spell.SpellChargeTime;
+                float overchantDuration = Vessel.spell.SpellChargeTime * EXTRA_CAST_TIME_FACTOR;
+                float beyondChantDuration = Vessel.spell.SpellChargeTime * BEYOND_CHANT_CAST_TIME_FACTOR;
+
+                overchantEndTime = normalCastEndTime + overchantDuration;
+                beyondChantEndTime = overchantEndTime + beyondChantDuration;
+
+                
+                if (knowsTimeIsPower2)
+                {
+                    overChantTotalField.Value = overchantDuration + beyondChantDuration;
+                    maxCastTime.Value = beyondChantEndTime * 1.2f;
+                } else
+                {
+                    overChantTotalField.Value = overchantDuration;
+                    maxCastTime.Value = overchantEndTime * 1.2f;
+                }
+
+                perfectReleaseTiming = (normalCastEndTime - normalCastEndTime * PERFECT_RELEASE_TIMING_FACTOR, normalCastEndTime + normalCastEndTime * PERFECT_RELEASE_TIMING_FACTOR);
+
+                // For overchanting, we drain additional mana per second to sustain the process
+                // A full overchant should drain an additional X% of the spell's normal mana cost for up to Y% more damage
+                overchantTotalManaDrain = Mathf.RoundToInt(Vessel.spell.ManaCost * EXTRA_MANA_COST_FACTOR);
+                overchantManaDrainPerSecond = overchantTotalManaDrain / (overchantDuration / 60f); //    The "/ 60f" is because SpellChargeTime/castTime/overChantTotal is measured in 60ths of a second
+                
+                float beyondChantTotalManaDrain = Mathf.RoundToInt(Vessel.spell.ManaCost * BEYOND_CHANT_MANA_COST_FACTOR);
+                beyondChantManaDrainPerSecond = beyondChantTotalManaDrain / (beyondChantDuration / 60f);
+
+                chargeAudioSource = new GameObject("ChargeAudio").AddComponent<AudioSource>();
+                chargeAudioSource.transform.SetParent(caster.transform);
+
                 state = State.ACTIVATED;
             }
 
             // SpellVessel already internally handles (and depends on) some chant control state so we delegate back there and just intercept at the points when establishing damage and cooldown
-            vessel.DoControlledChant();
-        }
-
-        protected override bool ShouldApplyCooldownOnUse()
-        {
-            return false; // Never want to apply cooldown on 1st use, and beyond that -- cooldown is applied automatically as part of spell finishing anyway.
+            Vessel.DoControlledChant();
         }
         
-        void Awake()
+        protected void Awake()
         {
             castBar = GameData.CB.TopBar.GetComponent<Image>();
             overchantBar = GameData.CB.OverchantBar.GetComponent<Image>();
-            originalCBColor = castBar.color;
-            originalOverchantColor= overchantBar.color;
+            castBar.sprite = overchantBar.sprite = Main.miscSpritesByName["castbar"];
+            overchantBar.transform.localScale = new Vector3(1f, 1.3f, 1f); // because the original sprite was 13px high as opposed to castBar's 10px
+            overchantBar.transform.localPosition = castBar.transform.localPosition + Vector3.left * .1f; // correcting pixel alignment issue
             exhaustionEffect = GameData.SpellDatabase.GetSpellByID(SpellDB_Start.EXHAUSTION_SPELL_ID);
         }
 
-        void ResetCastBarColors()
+        protected void OnDestroy()
         {
-            if (castBar != null) castBar.color = originalCBColor;
-            if (overchantBar != null) overchantBar.color = originalOverchantColor;
+            if (castBar != null) castBar.color = NORMAL_CAST_COLOR;
+            if (overchantBar != null) overchantBar.color = OVER_CAST_COLOR;
+            if (chargeAudioSource != null) Destroy(chargeAudioSource.gameObject);
         }
 
-        void OnDestroy()
+        protected void FixedUpdate()
         {
-            ResetCastBarColors();
-        }
-
-        protected override void Update()
-        {
-            base.Update();
             if (state == State.ACTIVATED)
             {
-                if (IsPerfectReleaseReady(CalculateCompletionFactor()))
-                    castBar.color = overchantBar.color = PERFECT_RELEASE_COLOR;
-                else if (castBar.color == PERFECT_RELEASE_COLOR)
-                    ResetCastBarColors();
+                timeSpentChanting += 1f * (60f * Time.deltaTime); // NB this probably should be Time.fixedDeltaTime but I'm just emulating the expectations of vanilla code
+                UpdateBarState();
 
-                if (overChantLifeField.Value > 0)
+                float manaDrainPerSecond = 0f;
+                if (castBarState == CastBarState.OVER)
+                    manaDrainPerSecond = overchantManaDrainPerSecond;
+                else if (castBarState == CastBarState.BEYOND)
+                    manaDrainPerSecond = beyondChantManaDrainPerSecond;
+
+                if (manaDrainPerSecond > 0)
                 {
-                    drainProgress += manaDrainPerSecond * Time.deltaTime; // mana is an int, so we build tiny increments per frame until we get a whole number to deduct
+                    drainProgress += manaDrainPerSecond * Time.fixedDeltaTime; // mana is an int, so we build tiny increments per frame until we get a whole number to deduct
                     if (drainProgress > 1f)
                     {
                         drainProgress -= 1f;
                         caster.MyStats.ReduceMana(1);
-                        if (caster.MyStats.CurrentMana <= vessel.spell.ManaCost) // At least enough mana to finish casting the spell (which isn't deducted 'til execution time) must remain in the bank
+                        if (caster.MyStats.CurrentMana <= Vessel.spell.ManaCost) // At least enough mana to finish casting the spell (which isn't deducted 'til execution time) must remain in the bank
                         {
-                            Backfire(totalManaDrain); // NB totalManaDrain already includes base spell mana cost, so this is more damage than a controlled backfire
-                            state = State.FAILED;
-                            vessel.ResolveEarly();
+                            Backfire(Vessel.spell.ManaCost + overchantTotalManaDrain); // NB we use the same backfire damage even if we're actually in a BEYOND chant
+                            damageMulti = 0f;
+                            cooldownMulti = 1f;
+                            state = State.LOCKED;
+                            Vessel.ResolveEarly();
                         }
                     }
                 }
             }
         }
 
-        protected bool IsPerfectReleaseReady(float completionFactor)
+        protected void UpdateBarState()
         {
-            const float perfectReleaseFactor = .03f;
-            if (!caster.MySkills.KnowsSkill(SkillDB_Start.PERFECT_RELEASE_SKILL_ID))
+            bool isPlayer = caster.MySkills.isPlayer;
+            if (isPlayer) castBar.color = NORMAL_CAST_COLOR;
+
+            if (!playingChargeSound)
+            {
+                float realEndTime = overchantEndTime;
+                if (knowsTimeIsPower2)
+                    realEndTime = beyondChantEndTime;
+
+                float secondsRemaining = (realEndTime - timeSpentChanting) / 60f;
+                if (secondsRemaining <= 7f)
+                {
+                    playingChargeSound = true;
+                    chargeAudioSource.PlayOneShot(Main.sfxByName["overchant-charge"], GameData.SFXVol * caster.MyAudio.volume * 0.8f);
+                }
+            }
+            
+            if (IsInTimingWindow(0, normalCastEndTime, out castBarStateFactor))
+            {
+                // cast bar color should be normal
+                // cast bar % should be timeSpent / normalCastEndTime
+                if (isPlayer)
+                    GameData.CB.TopBar.sizeDelta = new Vector2(castBarStateFactor * 275f, GameData.CB.TopBar.sizeDelta.y);
+                castBarState = CastBarState.NORMAL;
+            } else
+            {
+                if (isPlayer)
+                    GameData.CB.TopBar.sizeDelta = new Vector2(275f, GameData.CB.TopBar.sizeDelta.y);
+
+                if (IsInTimingWindow(normalCastEndTime, overchantEndTime, out castBarStateFactor))
+                {
+                    // NB: Overchant-charge sound is *exactly* 7 seconds (audioclip length is 8 but last second is silence)
+                    if (isPlayer)
+                    {
+                        overchantBar.color = OVER_CAST_COLOR;
+                        GameData.CB.OCBarRect.sizeDelta = new Vector2(castBarStateFactor * 275f, GameData.CB.OCBarRect.sizeDelta.y);
+                    }
+
+                    castBarState = CastBarState.OVER;
+                }
+                else if (knowsTimeIsPower2 && IsInTimingWindow(overchantEndTime, beyondChantEndTime, out castBarStateFactor))
+                {
+                    if (isPlayer)
+                    {
+                        castBar.color = OVER_CAST_COLOR;
+                        overchantBar.color = BEYOND_CHANT_COLOR;
+                        GameData.CB.OCBarRect.sizeDelta = new Vector2(castBarStateFactor * 275f, GameData.CB.OCBarRect.sizeDelta.y);
+                    }
+
+                    castBarState = CastBarState.BEYOND;
+                }
+            }
+
+            if (!isPlayer) npcCastBarField.Value.localScale = new Vector2(castBarStateFactor, npcCastBarField.Value.localScale.y);
+
+                // Perfect release overrides any other colour and state. Its factor is irrelevant.
+            if (IsPerfectReleaseReady())
+            {
+                if (!hasPlayedPerfectReleaseChime)
+                {
+                    caster.MyAudio.PlayOneShot(Main.sfxByName["perfect-release-window"], GameData.SFXVol * caster.MyAudio.volume * 2f);
+                    hasPlayedPerfectReleaseChime = true;
+                }
+                if (isPlayer) castBar.color = overchantBar.color = PERFECT_RELEASE_COLOR;
+                castBarState = CastBarState.PERFECT;
+            }
+
+            if (isPlayer)
+            {
+                UpdateDamageMulti();
+                UpdateCooldownMulti();
+                
+                var subtextObj = GameData.CB.GetSubtext();
+                subtextObj.transform.localPosition = Vector3.down * 20f;
+                subtextObj.rectTransform.sizeDelta = new Vector2(275, 10f);
+                subtextObj.fontSize = 15;
+                subtextObj.fontWeight = TMPro.FontWeight.Black;
+                subtextObj.horizontalAlignment = TMPro.HorizontalAlignmentOptions.Flush;
+
+                if (castBarState == CastBarState.PERFECT)
+                    subtextObj.color = PERFECT_RELEASE_COLOR;
+                else
+                    subtextObj.color = Color.white;
+
+                string leftVal;
+                string leftTerm;
+                
+                string rightVal = Mathf.RoundToInt(cooldownMulti * 100f).ToString();
+                string rightTerm = "CD";
+
+                if (castBarState == CastBarState.NORMAL)
+                {
+                    leftVal = Mathf.RoundToInt(CalculateBackfireChance()).ToString();
+                    leftTerm = "RISK";
+                }
+                else
+                {
+                    leftVal = Mathf.RoundToInt(damageMulti * 100).ToString();
+                    leftTerm = "DMG";
+                }
+
+                subtextObj.text = $"<align=left>{leftTerm} {leftVal}%</align><line-height=0>\r\n<align=right>{rightTerm} {rightVal}%</align></line-height>";
+            }
+        }
+
+        protected bool IsInTimingWindow(float start, float end, out float factor)
+        {
+            factor = Mathf.InverseLerp(start, end, timeSpentChanting);
+            return timeSpentChanting >= start && timeSpentChanting < end;
+        }
+
+        protected bool IsPerfectReleaseReady()
+        {
+            if (!knowsPerfectRelease1)
                 return false;
 
             if (caster.MyStats.CheckForStatus(exhaustionEffect))
                 return false;
 
-            return completionFactor >= 1 - perfectReleaseFactor && completionFactor <= 1 + perfectReleaseFactor;
+            return IsInTimingWindow(perfectReleaseTiming.start, perfectReleaseTiming.end, out var whatever);
         }
 
-        private float CalculateCompletionFactor()
+        protected float CalculateBackfireChance()
         {
-            return effectLife.Value / totalLife.Value;
+            if (castBarState != CastBarState.NORMAL)
+                return 0f;
+
+            float backfireChance = (1 - (castBarStateFactor)) * 100f;
+            for(var i = 0; i < expertControlPower; i ++)
+                backfireChance = (backfireChance - 7.5f) * .85f; // Every Expert Control power level drops the backfire chance a fair bit. Previously 1st skill gave 1, 2nd gave 2. Just buffed it so both give 2, for 4 total. Menas with 25% cast progress, backfire chance is 19%. It's not as great as it sounds because backfires suck now.
+
+            return Mathf.Max(0f, backfireChance);
         }
 
-        private void HandlePerfectRelease()
+        protected void HandleEarlyRelease()
         {
-            var dmgPop = GameData.Misc.CreateDmgPopClone("PERFECT RELEASE!!", caster.transform);
+            if (Random.Range(0, 100) < CalculateBackfireChance())
+            {
+                // A FAILED early release backfires dealing damage to the caster and still using full mana+cooldown
+                damageMulti = 0f;
+                cooldownMulti = 1f;
+                
+                if (knowsExpertControl2)
+                    damageMulti += .5f; // With 2nd skill, early release backfires still do 50% of their normal damage to enemies, so it's not a *complete* waste
+
+                Backfire(Mathf.RoundToInt(Vessel.spell.ManaCost));
+                
+                state = State.LOCKED;
+            } else
+            {
+                // Successful early release deals full damage with reduced cooldown and mana cost
+                Vessel.UseMana = false;
+                caster.MyStats.ReduceMana(Mathf.RoundToInt(Vessel.spell.ManaCost * castBarStateFactor));
+            }
+        }
+
+        protected void HandlePerfectRelease()
+        {
+            var dmgPop = GameData.Misc.CreateDmgPopClone("PERFECT RELEASE!!", target.transform);
             dmgPop.Num.color = PERFECT_RELEASE_COLOR;
-
-            ResetCastBarColors();
 
             if (caster.MySkills.isPlayer) UpdateSocialLog.CombatLogAdd("PERFECT RELEASE! Mana cost and cooldown not applied to spell! You cannot do this again whilst exhausted.", "green");
 
-            vessel.UseMana = false;
-            cooldownMulti = 0f;
+            Vessel.UseMana = false;
 
             var twinSpellSkill = GameData.SkillDatabase.GetSkillByID(SkillDB_Start.TWIN_SPELL_SKILL_ID);
             if (caster.MySkills.KnowsSkill(SkillDB_Start.PERFECT_RELEASE_2_SKILL_ID) && caster.MySkills.KnowsSkill(twinSpellSkill))
@@ -195,89 +410,151 @@ namespace Arcanism.Skills
             }
 
             caster.MyStats.AddStatusEffectNoChecks(exhaustionEffect, true, 0, caster);
-        }
 
-        private void HandleEarlyRelease(float completionFactor)
-        {
-            /*- Release a spell early with reduced cooldown and mana cost but at *least* the same damage
-            - Chance of backfire proportionate to chant length. Backfire damage to self  = 2 * mana cost
-            - Skill book 1: Backfired spells still damage the enemy (but only half)
-            - Skill book 2: Backfired spells do full damage to enemy*/
-
-            // early release: reduced cooldown and mana cost, full damage... but the chance of a backfire!
-            cooldownMulti = completionFactor;
-
-            vessel.UseMana = false;
-            caster.MyStats.ReduceMana(Mathf.RoundToInt(vessel.spell.ManaCost * completionFactor));
-
-            float backfireChance = (1 - (completionFactor)) * 100f;
-            float targetDamageFactorOnBackfire = 0f;
-
-            foreach (var expertControlSkillId in new string[] { SkillDB_Start.EXPERT_CONTROL_SKILL_ID, SkillDB_Start.EXPERT_CONTROL_2_SKILL_ID })
+            int refractionLevel = caster.MySkills.GetAscensionRank(SkillDB_Start.REFRACTION_ASCENSION_ID);
+            if (refractionLevel > 0)
             {
-                if (caster.MySkills.KnowsSkill(expertControlSkillId))
-                {
-                    backfireChance = (backfireChance - 7.5f) * .85f;
-                    targetDamageFactorOnBackfire += .5f; // 50% for havign 1st skill
-                }
-            }
-
-            if (Random.Range(0, 100) < Mathf.Max(3, backfireChance))
-            {
-                Backfire(Mathf.RoundToInt(vessel.spell.ManaCost));
-                damageMulti = targetDamageFactorOnBackfire;
+                var exhaustionStatus = new List<StatusEffect>(caster.MyStats.StatusEffects).Find(se => se.Effect == exhaustionEffect);
+                exhaustionStatus.Duration *= 1f - (refractionLevel * SkillDB_Start.REFRACTION_COOLDOWN_FACTOR);
             }
         }
 
-        private void HandleOverChant()
+        protected void UpdateDamageMulti()
         {
-            float completionFactor = overChantLifeField.Value / overChantTotalField.Value;
-            damageMulti = 1 + Mathf.Lerp(0f, EXTRA_DAMAGE_FACTOR, completionFactor);
-            cooldownMulti = 1 + Mathf.Lerp(0f, EXTRA_COOLDOWN_FACTOR, completionFactor);
-            // No need to increase mana cost here -- the additional mana is drained per second already in Update
+            if (state >= State.LOCKED) // LOCKED means damage has already been locked down, probably to 0 -- don't want to change it.
+                return;
+
+            bool applyTimeIsPower = true;
+
+            switch (castBarState)
+            {
+                case CastBarState.NORMAL:
+                    damageMulti = 1f;
+                    applyTimeIsPower = false;
+                    break;
+                case CastBarState.OVER:
+                    damageMulti = 1f + Mathf.Lerp(0f, EXTRA_DAMAGE_FACTOR, castBarStateFactor);
+                    break;
+                case CastBarState.BEYOND:
+                    damageMulti = (1 + EXTRA_DAMAGE_FACTOR) * Mathf.Lerp(1f, 1 + BEYOND_CHANT_DAMAGE_FACTOR, castBarStateFactor);
+                    break;
+
+                case CastBarState.PERFECT: // lil cheeky recursion here, leveraging the relevant damage calc logic then swapping back to PERFECT
+                    float origFactor = castBarStateFactor;
+                    float origTimeSpentChanting = timeSpentChanting;
+                    // PERFECT release does full available damage -- as if you have a completed overchant bar, or if you've unlocked the beyond chanting (time is power 2), as if you've completed THAT.
+                    castBarStateFactor = 1f;
+                    if (knowsTimeIsPower2)
+                    {
+                        timeSpentChanting = beyondChantEndTime;
+                        castBarState = CastBarState.BEYOND;
+                    } else
+                    {
+                        timeSpentChanting = overchantEndTime;
+                        castBarState = CastBarState.OVER;
+                    }
+                    UpdateDamageMulti();
+
+                    timeSpentChanting = origTimeSpentChanting;
+                    castBarStateFactor = origFactor;
+                    castBarState = CastBarState.PERFECT;
+                    return; // <-- note return, not break.
+            }
+
+            if (knowsTimeIsPower1 && applyTimeIsPower)
+            {
+                float secondsPassed = timeSpentChanting / 60f; // usual 60 factor bullshit
+                float timeIsPowerSeconds = secondsPassed - SECONDS_BEFORE_TIME_IS_POWER;
+                if (timeIsPowerSeconds > 0)
+                    damageMulti *= Mathf.Pow(TIME_IS_POWER_EXPONENT, timeIsPowerSeconds);
+            }
         }
 
-        public float GetSpellDamageMulti()
+        protected void UpdateCooldownMulti()
         {
-            if (state == State.FAILED)
-                return 0;
+            if (state >= State.LOCKED) // LOCKED means cooldown has already been locked down
+                return;
 
-            float completionFactor = CalculateCompletionFactor();
+            cooldownMulti = 1f;
+            switch (castBarState)
+            {
+                case CastBarState.NORMAL:
+                    cooldownMulti = castBarStateFactor;
+                    break;
+                case CastBarState.PERFECT:
+                    cooldownMulti = 0f;
+                    break;
+                case CastBarState.OVER:
+                    if (!knowsTimeIsPower3)
+                        cooldownMulti = 1 + Mathf.Lerp(0f, EXTRA_COOLDOWN_FACTOR, castBarStateFactor);
+                    break;
+                case CastBarState.BEYOND:
+                    if (!knowsTimeIsPower3)
+                        cooldownMulti = 1 + EXTRA_COOLDOWN_FACTOR;
+                    break;
+            }
+        }
 
-            if (IsPerfectReleaseReady(completionFactor))
-                HandlePerfectRelease();
+        public float GetSpellDamageMulti() // Called by spell release, this is more-or-less synonymous with a finish method
+        {
+            UpdateDamageMulti();
 
-            else if (completionFactor < 1)
-                HandleEarlyRelease(completionFactor);
+            switch (castBarState)
+            {
+                case CastBarState.OVER:
+                case CastBarState.BEYOND:
+                    caster.MyAudio.PlayOneShot(Main.sfxByName["overchant-release"], GameData.SFXVol * caster.MyAudio.volume * 0.8f);
+                    break;
 
-            else
-                HandleOverChant();
+                case CastBarState.PERFECT:
+                    HandlePerfectRelease();
+                    break;
+
+                case CastBarState.NORMAL:
+                default:
+                    HandleEarlyRelease();
+                    break;
+            }
 
             return this.damageMulti;
         }
 
         public float GetSpellCooldownMulti()
         {
-            if (state == State.FAILED)
-                cooldownMulti = 1;
-
+            UpdateCooldownMulti();
+            
             state = State.FINISHED; // Being finished means we're ready to destroy which will trigger skill cooldown.
+
             return cooldownMulti;
+        }
+
+        protected override float CalculateCooldownFactor() // Note that this entire behaviour is a SKILL primarily -- *this* method is for the skill's cooldown
+        {
+            if (castBarState == CastBarState.PERFECT) // With a perfect release, Control Chant gets no cooldown.
+                return 0f;
+
+            int refractionLevel = caster.MySkills.GetAscensionRank(SkillDB_Start.REFRACTION_ASCENSION_ID);
+            return 1f - (refractionLevel * SkillDB_Start.REFRACTION_COOLDOWN_FACTOR);
         }
 
         protected void Backfire(int manaBurned)
         {
-            int damage = manaBurned * 2;
+            int damage = Mathf.RoundToInt(Random.Range(1.5f, 3f) * manaBurned);
             var dmgPop = GameData.Misc.CreateDmgPopClone("BACKFIRE!!", caster.transform);
             dmgPop.Num.color = Color.red;
             if (caster.MySkills.isPlayer) UpdateSocialLog.CombatLogAdd($"BACKFIRE!! You fail to control the chaotic energy in time, and your own mana hurts you for {damage} damage!", "red");
 
-            caster.DamageMe(damage, true, vessel.spell.MyDamageType, caster, true, false);
-            caster.MyAudio.PlayOneShot(vessel.spell.CompleteSound, GameData.SFXVol * caster.MyAudio.volume * 0.8f);
+            caster.DamageMe(damage, true, Vessel.spell.MyDamageType, caster, true, false);
+            caster.MyAudio.PlayOneShot(Main.sfxByName["backfire"], GameData.SFXVol * caster.MyAudio.volume * 1f);
         }
 
         protected override bool IsInterrupted() {
-            return vessel == null || spellTarget == null || spellTarget.Myself == null || spellTarget.Myself.IsDead();
+            return Vessel == null || target == null || target.IsDead();
+        }
+
+        protected override bool ShouldApplyCooldownOnUse()
+        {
+            return false; // Never want to apply cooldown on 1st use, and beyond that -- cooldown is applied automatically as part of spell finishing anyway.
         }
 
         protected override bool IsFinished() => state == State.FINISHED;

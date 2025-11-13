@@ -8,9 +8,6 @@ namespace Arcanism
     class ItemIconVisuals : MonoBehaviour
     {
 
-        public static Color JUNK_COLOR = new Color32(187, 187, 187, 255);
-        public static Color SUPERIOR_COLOR = new Color32(0, 150, 255, 255);
-        public static Color MASTERWORK_COLOR = new Color32(151, 255, 0, 255);
 
         public Image originalSparkler;
         public float backgroundScale = 1f;
@@ -21,7 +18,6 @@ namespace Arcanism
 
         void OnDestroy()
         {
-            qualityBackground.enabled = false; // this should be redundant but i'm just testing 'cause it seems like the backgrounds are hanging around during hot reloads sometimes
             Destroy(qualityBackground.gameObject);
         }
 
@@ -52,8 +48,7 @@ namespace Arcanism
             originalSparkler.gameObject.SetActive(blessLevel != Blessing.NONE);
 
             if (blessLevel == Blessing.BLESSED)
-            { originalSparkler.color = Color.cyan; }
-
+                originalSparkler.color = Color.cyan;
             else if (blessLevel == Blessing.GODLY)
                 originalSparkler.color = Color.magenta;
         }
@@ -71,24 +66,9 @@ namespace Arcanism
 
             qualityBackground.transform.localScale = new Vector3(backgroundScale, backgroundScale, backgroundScale);
 
-            byte alpha = 45;
-            switch (quality)
-            {
-                case Quality.JUNK:
-                    qualityBackground.color = JUNK_COLOR;
-                    break;
-                case Quality.NORMAL:
-                    alpha = 0;
-                    qualityBackground.color = Color.black;
-                    break;
-                case Quality.SUPERIOR:
-                    qualityBackground.color = SUPERIOR_COLOR;
-                    break;
-                case Quality.MASTERWORK:
-                    qualityBackground.color = MASTERWORK_COLOR;
-                    break;
-            }
-            qualityBackground.color = new Color(qualityBackground.color.r, qualityBackground.color.g, qualityBackground.color.b, alpha / 255f);
+            int alpha = quality == Quality.NORMAL ? 0 : 95;
+            Color backgroundColor = GetQualityColor(quality);
+            qualityBackground.color = new Color(backgroundColor.r, backgroundColor.g, backgroundColor.b, alpha / 255f);
         }
 
         public int GetQuantity() => lastQuantity;

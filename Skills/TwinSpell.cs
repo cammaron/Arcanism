@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Arcanism.Patches;
 using HarmonyLib;
 using Arcanism.SkillExtension;
+using UnityEngine.Rendering.PostProcessing;
 
 namespace Arcanism.Skills
 {
@@ -12,6 +13,7 @@ namespace Arcanism.Skills
         public static bool AllowSameTarget = false;
 
         private Traverse<Stats> vesselTargetField;
+        private Traverse<float> vesselEffectLifeField;
         private Character originalSpellTarget; 
         private readonly List<Character> allTargets = new List<Character>();
 
@@ -24,6 +26,18 @@ namespace Arcanism.Skills
 
         HashSet<Character> npcsDiedWhileCasting;
 
+        AudioSource audio;
+        ColorGrading colorGrading;
+        Bloom bloom;
+
+        float origContrast;
+        float origSaturation;
+        float origBrightness;
+        float origBloomIntensity;
+        float origDiffusion;
+
+        Vector3 origTargetTrackingScale;
+
         public static void CreateExtension(Skill coreSkill)
         {
             ExtensionManager.AddExtension(coreSkill, (caster, vessel) => {
@@ -33,12 +47,21 @@ namespace Arcanism.Skills
                     component = caster.gameObject.AddComponent<TwinSpell>();
                     component.skill = coreSkill;
                     component.caster = caster;
-                    component.vessel = vessel;
+                    component.Vessel = vessel;
+                    component.audio = new GameObject("SlowMoAudio").AddComponent<AudioSource>();
+                    component.audio.transform.SetParent(component.transform);
+                    component.audio.volume = GameData.SFXVol * .5f;
+
+                    if (Main.sfxByName.TryGetValue("slowmo", out var clip))
+                        component.audio.clip = clip;
+                    else
+                        Main.Log.LogError("'slowmo' audio clip for Twin Spell not loaded!");
 
                     if (vessel != null)
                     {
                         var traversal = Traverse.Create(vessel);
                         component.vesselTargetField = traversal.Field<Stats>("targ");
+                        component.vesselEffectLifeField = traversal.Field<float>("EffectLife");
                         component.originalSpellTarget = component.vesselTargetField.Value.Myself;
                         component.allTargets.Add(component.originalSpellTarget);
                     }
@@ -47,6 +70,30 @@ namespace Arcanism.Skills
                     if (caster.MySkills.KnowsSkill(SkillDB_Start.TWIN_SPELL_SKILL_ID)) component.maxTargets += 1;
                     if (caster.MySkills.KnowsSkill(SkillDB_Start.TWIN_SPELL_MASTERY_SKILL_ID)) component.maxTargets += 1;
                     if (caster.MySkills.KnowsSkill(SkillDB_Start.TWIN_SPELL_MASTERY_2_SKILL_ID)) component.maxTargets += 1;
+
+                    var postProcessing = GameData.CamGetPPFX?.GetLivePPFX();
+                    if (postProcessing != null)
+                    {
+                        if (postProcessing.TryGetSettings<ColorGrading>(out component.colorGrading))
+                        {
+                            component.origContrast = component.colorGrading.contrast;
+                            component.origSaturation = component.colorGrading.saturation;
+                            component.origBrightness = component.colorGrading.brightness;
+                        } 
+                        
+                        if (postProcessing.TryGetSettings<Bloom>(out component.bloom))
+                        {
+                            component.origBloomIntensity = component.bloom.intensity;
+                            component.origDiffusion = component.bloom.diffusion;
+                        }
+                    }
+
+                    if (component.caster.MySkills.isPlayer)
+                    {
+                        var tracker = GameData.PlayerControl.GetComponentInChildren<TargetTracker>();
+                        component.origTargetTrackingScale = tracker.transform.localScale;
+                        tracker.transform.localScale *= 1.35f; // temporarily increase target tracker scaling as there are often enemies within spell range we can't tab too, which is super frustrating during Twin Spell 
+                    }
                 }
 
                 return component;
@@ -59,12 +106,45 @@ namespace Arcanism.Skills
 
             if (caster.MySkills.isPlayer && Time.time >= showTextUntilTime)
                 GameData.CB.OCTxt.transform.gameObject.SetActive(false);
+
+        }
+
+        protected void FixedUpdate()
+        {
+            if (vesselEffectLifeField != null)
+                vesselEffectLifeField.Value += (60f * Time.deltaTime) * Mathf.Pow(2, allTargets.Count - 1);
         }
 
         void OnDestroy()
         {
+            audio.Stop();
+            Destroy(audio.gameObject);
+            ResetCameraEffects();
+            
             if (caster.MySkills.isPlayer)
+            {
                 GameData.CB.OCTxt.text = "-Controlled Chant-";
+                var tracker = GameData.PlayerControl.GetComponentInChildren<TargetTracker>();
+                tracker.transform.localScale = origTargetTrackingScale;
+            }
+                
+
+        }
+
+        void ResetCameraEffects()
+        {
+            Time.timeScale = 1f;
+            if (colorGrading != null)
+            {
+                colorGrading.contrast.value = origContrast;
+                colorGrading.saturation.value = origSaturation;
+                colorGrading.brightness.value = origBrightness;
+            }
+            if (bloom != null)
+            {
+                bloom.intensity.value = origBloomIntensity;
+                bloom.diffusion.value = origDiffusion;
+            }
         }
 
         protected override IEnumerable<(Condition, string)> GetUseConditions()
@@ -76,7 +156,7 @@ namespace Arcanism.Skills
                 ((caster, vessel, target) => target != null && target != caster,                                                                "Invalid target!"),
                 ((caster, vessel, target) => caster.GetComponent<ControlChant>() == null,                                                       "Cannot be used while controlling a chant."),
                 ((caster, vessel, target) => AllowSameTarget || !allTargets.Contains(target),                                                   "Cannot be used on the same target twice."),
-                ((caster, vessel, target) => caster.MyStats.GetCurrentMana() - vessel.spell.ManaCost >= GetNextTargetManaCost(),                "You need more mana!"),
+                //((caster, vessel, target) => caster.MyStats.GetCurrentMana() - vessel.spell.ManaCost >= GetNextTargetManaCost(),                "You need more mana!"),
                 ((caster, vessel, target) => CanAddMoreTargets(),                                                                               "Unable to twin this spell any further."),
                 ((caster, vessel, target) => vessel.spell.SpellRange >= Vector3.Distance(caster.transform.position, target.transform.position), "Target is too far away!"),
             };
@@ -84,7 +164,7 @@ namespace Arcanism.Skills
 
         protected override bool ShouldApplyCooldownOnUse()
         {
-            return false; // return !CanAddMoreTargets(); -- actually let's stick w/ cooling down only on spell release, that way we can cancel cast without punishment aside from last mana.
+            return false; // return !CanAddMoreTargets(); -- actually let's stick w/ cooling down only on spell release, that way we can cancel cast without punishment aside from lost mana.
         }
 
         protected override void ApplySkill(Character target)
@@ -99,7 +179,33 @@ namespace Arcanism.Skills
                 GameData.CB.OCTxt.text = allTargets.Count == 2 ? "-Twinned!-" : allTargets.Count == 3 ? "-TRIPLED!-" : "-FULL STACK!!-";
                 GameData.CB.OCTxt.transform.gameObject.SetActive(true);
                 GameData.CB.OCTxt.fontSize = 48;
-                showTextUntilTime = Time.time + 0.6f;
+                showTextUntilTime = Time.time + 1f;
+
+                if (CanAddMoreTargets())
+                {
+                    if (colorGrading != null)
+                    {
+                        colorGrading.contrast.value += 10f;
+                        colorGrading.saturation.value -= 80;
+                        colorGrading.brightness.value += 5;
+                    }
+                    if (bloom != null)
+                    {
+                        bloom.intensity.value += 2.5f;
+                        bloom.diffusion.value += 2;
+                    }
+                    Time.timeScale *= .5f;
+                    if (allTargets.Count == 2)
+                    {
+                        if (audio.clip != null) audio.Play();
+                    } else
+                    {
+                        audio.pitch *= .8f;
+                    } 
+                } else
+                {
+                    ResetCameraEffects();
+                }
             }
         }
 
@@ -113,6 +219,7 @@ namespace Arcanism.Skills
                 if (caster.MySkills.KnowsSkill(SkillDB_Start.VANISHING_TWIN_SKILL_ID))
                     multi += npcsDiedWhileCasting.Count;
 
+                GameData.PlayerAud.PlayOneShot(Main.sfxByName["twin-release"]);
             }
 
             hasAttacked = true;
@@ -147,13 +254,13 @@ namespace Arcanism.Skills
             UpdateSocialLog.CombatLogAdd("The dead target's soul saps the life of those connected to it by Twin Spell!");
             var parasiticTwinSpell = GameData.SpellDatabase.GetSpellByID(SpellDB_Start.PARASITIC_TWIN_SPELL_ID);
             // Parasitic Twin *has* no base target damage, thus all its damage is the "bonus damage" -- it's completely calculated by int/prof, scaling with character growth. With a max int around 353ish (before blessings) and max int prof, this will hit for 1700 base (*BASE*, as in, before other int/prof scaling increases it. so, same as damage listing on any spell desc)
-            int baseDamage = Mathf.RoundToInt(caster.MyStats.GetCurrentInt() * 5 * (caster.MyStats.IntScaleMod / 40));
+            int baseDamage = Mathf.RoundToInt(caster.MyStats.GetCurrentInt() * 5 * (caster.MyStats.IntScaleMod / 40f));
             int modifiedDamage = SpellVessel_CalcDmgBonus.CalculateSpellDamage(caster, baseDamage, false);
 
             foreach (var targ in allTargets)
             {
                 if (!IsTargetDead(targ))
-                    targ.MyStats.AddStatusEffect(parasiticTwinSpell, caster.MySkills.isPlayer, modifiedDamage);
+                    targ.MyStats.AddStatusEffect(parasiticTwinSpell, caster.MySkills.isPlayer, modifiedDamage, caster);
             }
 
             appliedParasiticTwin = true;
@@ -161,11 +268,12 @@ namespace Arcanism.Skills
 
         private int GetNextTargetManaCost()
         {
+            return 0; // Leaving the other code here in case I decide to rebalance this, but as of 04/11/2025 it seems like the mana cost made this skill undesirable to use, and the long cooldown already prevents it being OP
             // 1.3x exponent means 15% more mana than 2 casts for 2 targets; 33% more for 3; 54% more for 4. Remember, that's 54% more than *4 casts* which is already a HUGE amount of mana usage.
-            float costExponent = 1.3f * (1 - caster.MySkills.GetAscensionRank(SkillDB_Start.MIND_SPLIT_ASCENSION_ID) * SkillDB_Start.MIND_SPLIT_COST_FACTOR);
+            /*float costExponent = 1.3f * (1 - caster.MySkills.GetAscensionRank(SkillDB_Start.MIND_SPLIT_ASCENSION_ID) * SkillDB_Start.MIND_SPLIT_COST_FACTOR);
             int additionalManaCost = (int)(Mathf.Pow(costExponent, allTargets.Count) * vessel.spell.ManaCost);
 
-            return additionalManaCost;
+            return additionalManaCost;*/
         }
 
         protected override float CalculateCooldownFactor()
@@ -179,7 +287,7 @@ namespace Arcanism.Skills
         private bool IsTargetDead(Character target) => target == null || target.IsDead(); // it seems like NPCs are not destroyed, they just become dead bodies then respawn so in theory shouldn't null. Still...
 
 
-        protected override bool IsInterrupted() => vessel == null;
+        protected override bool IsInterrupted() => Vessel == null;
 
         protected override bool IsFinished() => isFinished;
 

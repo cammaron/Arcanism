@@ -12,7 +12,7 @@ namespace Arcanism
         protected delegate bool Condition(Character caster, SpellVessel vessel, Character target);
 
         protected Character caster;
-        protected SpellVessel vessel;
+        public SpellVessel Vessel { get; protected set; }
         protected Character target;
         protected Skill skill;
 
@@ -55,7 +55,7 @@ namespace Arcanism
         {
             foreach (var c in GetUseConditions())
             {
-                if (!c.Item1(caster, vessel, target))
+                if (!c.Item1(caster, Vessel, target))
                 {
                     failureReason = c.Item2;
 
@@ -90,6 +90,7 @@ namespace Arcanism
 
             failureReason = null;
 
+            this.target = target;
             ApplySkill(target);
 
             if (ShouldApplyCooldownOnUse())

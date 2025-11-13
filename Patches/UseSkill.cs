@@ -9,7 +9,7 @@ namespace Arcanism.Patches
 	[HarmonyPatch(typeof(UseSkill), nameof(UseSkill.DoSkill))]
 	public class UseSkill_DoSkill
 	{
-		/* Detecting and testing against any existant ExtendedSkill's usage criteria. If an ExtendedSkill exists for the skill being used,
+		/* Detecting and testing against any existent ExtendedSkill's usage criteria. If an ExtendedSkill exists for the skill being used,
 		 * it will be added as a component to the Character using the skill during this method. */
 		static bool Prefix(UseSkill __instance, ref bool __result, ref bool ___passCheck, Stats ___MyStats, Skill _skill, Character _target)
         {

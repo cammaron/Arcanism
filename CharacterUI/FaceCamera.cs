@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Arcanism
+namespace Arcanism.CharacterUI
 {
     /* NOT a camera for your face. Put your duck lips away. */
     class FaceCamera : MonoBehaviour

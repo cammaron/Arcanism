@@ -48,7 +48,77 @@ namespace Arcanism.Patches
 			var lowerTxt = txt.ToLower();
 
 			var stats = GameData.PlayerStats;
-			if (lowerTxt.StartsWith("/arc.youreaflamewellharry")) // ... worth it
+			if (lowerTxt.StartsWith("/arc.shield"))
+            {
+				var shield = stats.GetComponent<SpellShieldVisual>();
+				if (shield == null)
+				{
+					shield = stats.gameObject.AddComponent<SpellShieldVisual>();
+					shield.stats = stats;
+					shield.Init();
+				}
+
+				var tokens = txt.Split(' ');
+				foreach(var t in tokens)
+                {
+					if (t.StartsWith("/")) continue;
+
+					var subs = t.Split('=');
+					if (subs[0] == "amt")
+                    {
+						stats.SpellShield = int.Parse(subs[1]);
+						UpdateSocialLog.LogAdd("And setting shield amount to " + stats.SpellShield);
+						continue;
+					}
+
+					char propPrefix = subs[0][0];
+					UpdateSocialLog.LogAdd("Doin' substring on " + subs[0]);
+					string prop = subs[0].Substring(1, subs[0].Length - 1);
+					if (propPrefix == 'c')
+                    {
+						var colorTokens = subs[1].Split('-');
+						var color = new Color32(byte.Parse(colorTokens[0]), byte.Parse(colorTokens[1]), byte.Parse(colorTokens[2]), byte.Parse(colorTokens[3]));
+						shield.material.SetColor(prop, color);
+						UpdateSocialLog.LogAdd($"Setting color {prop} to {color}");
+					} else if (propPrefix == 'f')
+                    {
+						float val = float.Parse(subs[1]);
+						shield.material.SetFloat(prop, val);
+						UpdateSocialLog.LogAdd($"Setting float {prop} to {val}");
+					}
+                }
+				
+				return false;
+			}
+			else if (lowerTxt.StartsWith("/arc.fixcam"))
+            {
+				GameData.CamControl.ActualCam.tag = "MainCamera";
+				UpdateSocialLog.LogAdd("Main camera fixed.");
+				return false;
+			} else if (lowerTxt.StartsWith("/arc.giant"))
+            {
+				var npc = GameData.PlayerControl.CurrentTarget?.GetComponent<TheyMightBeGiants>();
+				if (npc == null)
+				{
+					UpdateSocialLog.LogAdd("Target a non-sim NPC first.");
+					return false;
+				}
+				if (lowerTxt.StartsWith("/arc.gianter"))
+					npc.GetComponent<TheyMightBeGiants>().BecomeSupermassive();
+				else
+					npc.GetComponent<TheyMightBeGiants>().BecomeGiant();
+			}
+			else if (lowerTxt.StartsWith("/arc.spell"))
+            {
+				string lineName = lowerTxt.Split(' ')[1];
+				UpdateSocialLog.LogAdd("Looking for spell with line " + lineName);
+				foreach(var s in GameData.SpellDatabase.SpellDatabase)
+                {
+					if (s.Line.ToString().ToLower() == lineName)
+						UpdateSocialLog.LogAdd("Found spell: " + s.SpellName + " with line " + s.Line.ToString());
+                }
+				return false;
+            } else if (lowerTxt.StartsWith("/arc.youreaflamewellharry")) // ... worth it
 			{
 				UpdateSocialLog.LogAdd("Current target: " + GameData.PlayerControl.CurrentTarget);
 				var npc = GameData.PlayerControl.CurrentTarget?.GetComponent<Character>();
@@ -112,6 +182,11 @@ namespace Arcanism.Patches
 						requireItem = true;
 						blessing = ItemExtensions.Blessing.BLESSED;
 					}
+					else if (token.Contains("god"))
+					{
+						requireItem = true;
+						blessing = ItemExtensions.Blessing.GODLY;
+					}
 					else if (token == "superior")
 					{
 						requireItem = true;
@@ -121,8 +196,17 @@ namespace Arcanism.Patches
 					{
 						requireItem = true;
 						quality = ItemExtensions.Quality.MASTERWORK;
-					} else if (token == "map")
+					}
+					else if (token == "exquisite")
+					{
+						requireItem = true;
+						quality = ItemExtensions.Quality.EXQUISITE;
+					}
+					else if (token == "map") {
+						UpdateSocialLog.LogAdd("Adding map drop to enemy loot table. GM.Maps.Count is " + GameData.GM.Maps.Count);
+						UpdateSocialLog.LogAdd("M aps[0].ItemName is " + GameData.GM.Maps[0].ItemName);
 						lootTable.ActualDrops.Add(GameData.GM.Maps[0]);
+					}
 					else if (token == "sivak" || token == "siva")
 						lootTable.ActualDrops.Add(GameData.GM.Sivak);
 					else if (token == "charm")
@@ -146,6 +230,7 @@ namespace Arcanism.Patches
 				
 				lootTable.ActualDropsQual = new List<int>(lootTable.ActualDrops.Count);
 				var helper = lootTable.GetComponent<LootHelper>();
+				helper.itemMeta?.Clear();
 				helper.UpdateLootQuality();
 
 				if (requireItem)
@@ -304,7 +389,7 @@ namespace Arcanism.Patches
             }
 			else if (lowerTxt.StartsWith("/arc.reloadsprites"))
             {
-				Main.LoadSprites();
+				Main.Instance.LoadFiles();
 				ItemDatabase_Start.RefreshSprites();
 				SkillDB_Start.RefreshSprites();
 				return false;
@@ -466,10 +551,12 @@ namespace Arcanism.Patches
 
 			if (lowerTxt.StartsWith("/arc.sdmg")) //   /arc.sdmg int prof spelldmg
 			{
+				UpdateSocialLog.LogAdd("sdmg usage: /arc.sdmg lvl int prof basedmg [all params required]");
 				var tokens = txt.Split(' ');
-				int intelligence = int.Parse(tokens[1]);
-				int prof = int.Parse(tokens[2]);
-				int damage = int.Parse(tokens[3]);
+				int level = int.Parse(tokens[1]);
+				int intelligence = int.Parse(tokens[2]);
+				int prof = int.Parse(tokens[3]);
+				int damage = int.Parse(tokens[4]);
 
 				if (testSpell == null)
 				{
@@ -480,16 +567,27 @@ namespace Arcanism.Patches
 				}
 				testSpell.TargetDamage = damage;
 
-				// just add a delta to BaseInt to get total int where we need it, since CurrentInt is private
 				var intField = Traverse.Create(stats).Field<int>("CurrentInt");
-				UpdateSocialLog.LogAdd("Changing CurrentInt from " + intField.Value + " to " + intelligence);
+				var oldInt = intField.Value;
+				var oldLvl = stats.Level;
+				var oldScale = stats.IntScaleMod;
+				UpdateSocialLog.LogAdd($"Testing spell: level {level}, int {intelligence}, prof {prof}, base damage {damage}");
 				intField.Value = intelligence;
 				stats.IntScaleMod = Mathf.Clamp(prof, 1, 40);
 				stats.Myself.MySpells.StartSpellNoAnim(testSpell, GameData.PlayerControl.CurrentTarget.MyStats, 0f);
+				stats.StartCoroutine(ResetStats(stats, intField, oldLvl, oldInt, oldScale));
 				return false;
 			}
 
 			return true;
 		}
+		static IEnumerator ResetStats(Stats stats, Traverse<int> intField, int oldLvl, int oldInt, int oldScale)
+        {
+			yield return new WaitForSeconds(3f);
+			UpdateSocialLog.LogAdd("Resetting stats to old values.");
+			intField.Value = oldInt;
+			stats.Level = oldLvl;
+			stats.IntScaleMod = oldScale;
+        }
 	}
 }

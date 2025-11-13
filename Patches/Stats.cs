@@ -5,6 +5,16 @@ using System.Reflection.Emit;
 
 namespace Arcanism.Patches
 {
+	[HarmonyPatch(typeof(Stats), "Start")]
+	public class Stats_Start
+    {
+		public static void Postfix(Stats __instance)
+        {
+			var shield = __instance.gameObject.AddComponent<SpellShieldVisual>();
+			shield.stats = __instance;
+        }
+    }
+
 	[HarmonyPatch(typeof(Stats), nameof(Stats.RemoveBreakableEffects))]
 	public class Stats_RemoveBreakableEffects
 	{
@@ -49,27 +59,30 @@ namespace Arcanism.Patches
 		}
 	}
 
-	/* Decrease the modifier for HP/Mana regeneration when in a "meditative state" */
+	/* Prevent 'meditative state' message showing, because boosted regen will now only occur when sitting -- see RegenEffects patch below */
 	[HarmonyPatch(typeof(Stats), "Update")]
 	public class Stats_Update
 	{
-		public const float MEDITATE_STATE_REGEN_FACTOR = 2.5f;
-		static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-		{
-			return new CodeMatcher(instructions)
-				.MatchStartForward(new CodeMatch(OpCodes.Call, AccessTools.Method(typeof(Stats), "RegenEffects")))
-				.Advance(-1)
-				.ThrowIfNotMatch("Unable to find float regen multiplier argument to be passed to RegenEffects method.", new CodeInstruction(OpCodes.Ldc_R4))
-				.RemoveInstruction()
-				.Insert(new CodeInstruction(OpCodes.Ldc_R4, MEDITATE_STATE_REGEN_FACTOR)
-			).Instructions();
-		}
+		public static void Prefix(bool ___medMsg)
+        {
+			___medMsg = true;  // to prevent meditative state msg ever showing as I'm controlling this logic myself now
+        }
 	}
 
-	/* Need to change the other regen methods anyway to make regen more stat dependent. Rather than change logic in 2 places, seems better to update this method (which previously duplicated the logic) */
+	/* Arcanism has a heavy focus on an altered mana economy. The aim is to greatly slow down the amplified regen between fights, leaving it still useful but not near-instantaneous. 
+	 * Previously patched the IL code to pass a different multi into RegenEffects, which was fragile, so now literally just ignoring the argument and deciding the appropriate multi
+	 * here. 
+	 * 
+	 * The goal is to make regen slightly more stat dependent (so that End and Wis amplify base regen more), and now that the game features Sitting, I'll change it to only boost your
+	 * regen speed whilst sitting rather than any time you've been out of combat. Aside from immersion, this fixes an issue in which you could regen mana *while casting*, which actually
+	 * hugely offset the mana costs of Control Chant when doing very long casts (sometimes regenerating more mana than you're spending). */
 	[HarmonyPatch(typeof(Stats), "RegenEffects")]
 	public class Stats_RegenEffects
 	{
+		public const float RESTING_REGEN_MULTI = 2.5f;
+
+		protected static bool AlreadyResting = false;
+
 		public static int GetHealthRegen(Stats stats)
 		{
 			return Mathf.RoundToInt(stats.Level + (2 * stats.EndScaleMod) / 100f * stats.GetCurrentEnd());
@@ -80,24 +93,55 @@ namespace Arcanism.Patches
 			return Mathf.RoundToInt(((stats.Level * 0.5f) + (2 * stats.WisScaleMod) / 100f * stats.GetCurrentWis()));
 		}
 
+		public static float GetCurrentRegenMulti(Stats stats)
+        {
+			if ((stats.Myself.MySpells?.isCasting()).GetValueOrDefault(false)) return 0f;  // No regen during cast
+			
+			bool isPlayer = (stats.Myself.MySkills?.isPlayer).GetValueOrDefault(false);
+			bool isSitting = (stats.Myself.MyNPC?.ThisSim?.sitting).GetValueOrDefault(false) || (isPlayer && GameData.PlayerControl.Sitting);
+
+			if (isSitting && stats.RecentCast <= 0f && stats.RecentDmg <= 0f)
+			{
+				if (isPlayer && !AlreadyResting)
+                {
+					UpdateSocialLog.LogAdd($"You feel yourself relaxing (natural regeneration improved by {Mathf.RoundToInt(RESTING_REGEN_MULTI * 100f)}%)", "lightblue");
+					AlreadyResting = true;
+					GameData.PlayerInv.PlayerStatDisp.UpdateDisplayStats();
+				}
+				return RESTING_REGEN_MULTI;
+			}
+
+			if (isPlayer && AlreadyResting)
+			{
+				UpdateSocialLog.LogAdd("You finish resting.", "lightblue");
+				AlreadyResting = false;
+				GameData.PlayerInv.PlayerStatDisp.UpdateDisplayStats();
+			}
+			return 1f;
+		}
+
 		static bool Prefix(Stats __instance, float _mod, ref int ___CurrentHP, int ___CurrentMaxHP, ref int ___CurrentMana, int ___CurrentMaxMana)
 		{
+			float regenMulti = GetCurrentRegenMulti(__instance);
+			
 			if (___CurrentHP < ___CurrentMaxHP) 
-				___CurrentHP = Mathf.Min(___CurrentHP + Mathf.RoundToInt(GetHealthRegen(__instance) * _mod), ___CurrentMaxHP);
+				___CurrentHP = Mathf.Min(___CurrentHP + Mathf.RoundToInt(GetHealthRegen(__instance) * regenMulti), ___CurrentMaxHP);
 
 			if (___CurrentMana < ___CurrentMaxMana) 
-				___CurrentMana = Mathf.Min(___CurrentMana + Mathf.RoundToInt(GetManaRegen(__instance) * _mod), ___CurrentMaxMana);
+				___CurrentMana = Mathf.Min(___CurrentMana + Mathf.RoundToInt(GetManaRegen(__instance) * regenMulti), ___CurrentMaxMana);
 			return false;
 		}
 	}
 
-	/* With regen in general being significantly nerfed, */
+	/* Updating the 2 Get Regen methods--which are just used for stat display purposes -- to reduce code duplication and use the above logic to determine current regen. 
+	 * Notably, compared with vanilla, this method will also include the current regen multi, so you can see your effective regen when sitting. */
 	[HarmonyPatch(typeof(Stats), nameof(Stats.GetCurrentHPRegen))]
 	public class Stats_GetCurrentHPRegen
 	{
-		static bool Prefix(Stats __instance, ref int __result)
+		static bool Prefix(Stats __instance, ref int __result, int ___seRegen)
 		{
-			__result = Stats_RegenEffects.GetHealthRegen(__instance);
+			// NB "seRegen" prop on Stats appears unused in vanilla code. I'm adding it in here in case it ever gets assigned to, but I guess that means there's currently no status effects giving health regen.
+			__result = ___seRegen + Mathf.RoundToInt(Stats_RegenEffects.GetHealthRegen(__instance) * Stats_RegenEffects.GetCurrentRegenMulti(__instance));
 			return false;
 		}
 	}
@@ -113,7 +157,7 @@ namespace Arcanism.Patches
 		static bool Prefix(Stats __instance, ref int __result, int ___seManaRegen)
 		{
 			// NB removed a call to CalcStats here that seemed like it would be very inefficient now that this method is being used on regen ticks. Seems like it must surely have been redundant anyway, but leaving this comment in case...
-			__result = ___seManaRegen + Stats_RegenEffects.GetManaRegen(__instance);
+			__result = ___seManaRegen + Mathf.RoundToInt(Stats_RegenEffects.GetManaRegen(__instance) * Stats_RegenEffects.GetCurrentRegenMulti(__instance));
 			return false;
 		}
 	}

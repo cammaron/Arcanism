@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using static Arcanism.Patches.ItemExtensions;
 using HarmonyLib;
+using UnityEngine.EventSystems;
 
 namespace Arcanism.Patches
 {
@@ -12,7 +13,7 @@ namespace Arcanism.Patches
     public class PlayerControl_LeftClick
     {
         
-        static void Prefix(ref OriginalItemMeta<Item> __state)
+        static bool Prefix(PlayerControl __instance, ref OriginalItemMeta<Item> __state)
         {
             var slot = GameData.MouseSlot;
             var item = slot.MyItem;
@@ -20,6 +21,25 @@ namespace Arcanism.Patches
             {
                 __state = RevertQuantity(item, ref slot.Quantity);
             }
+
+            Ray ray = __instance.camera.ScreenPointToRay(Input.mousePosition);
+            
+            // Overriding treasure chest spawn code to spawn predefined chest based on level of treasure map used
+            RaycastHit raycastHit;
+            if (Physics.Raycast(ray, out raycastHit))
+            {
+                if (raycastHit.transform.tag == "Treasure" && !EventSystem.current.IsPointerOverGameObject() && Vector3.Distance(__instance.transform.position, raycastHit.transform.position) < 5f)
+                {
+                    GameObject.Instantiate(SpellVessel_DoMiscSpells.TreasureHuntChest, raycastHit.transform.position, raycastHit.transform.rotation);
+                    GameObject.Instantiate(GameData.Misc.DigFX, raycastHit.transform.position, raycastHit.transform.rotation);
+                    GameData.PlayerAud.PlayOneShot(GameData.Misc.DigSFX, GameData.PlayerAud.volume * GameData.SFXVol);
+                    GameData.GM.GetComponent<TreasureHunting>().ResetTreasureHunt();
+                    raycastHit.transform.gameObject.SetActive(false);
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         static void Postfix(OriginalItemMeta<Item> __state)

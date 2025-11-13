@@ -20,4 +20,15 @@ namespace Arcanism.Patches
             return false;
         }
     }
+
+    /* Wand bolts have damage set straight off the item rather than from character's inventory value, which means bonuses applied to character's weapon dmg aren't applied to bolts.
+     Just straight out overriding this to fix the damage that's passed in. */
+    [HarmonyPatch(typeof(WandBolt), nameof(WandBolt.LoadWandBolt))]
+    public class WandBolt_LoadWandBolt
+    {
+        static void Prefix(Character _caster, ref int _dmg)
+        {
+            _dmg = _caster.MyStats.MyInv.MHDmg;
+        }
+    }
 }

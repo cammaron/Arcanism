@@ -349,11 +349,21 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CharacterHoverUI.cs" />
-    <Compile Include="FaceCamera.cs" />
-    <Compile Include="HealthBar.cs" />
+    <Compile Include="CharacterUI\CharacterHoverUI.cs" />
+    <Compile Include="CharacterUI\CustomNamePlate.cs" />
+    <Compile Include="CharacterUI\FaceCamera.cs" />
+    <Compile Include="CharacterUI\HoverElement.cs" />
+    <Compile Include="CharacterUI\LevelDisplay.cs" />
+    <Compile Include="CharacterUI\HealthBar.cs" />
+    <Compile Include="CharacterUI\TargetIndicator.cs" />
+    <Compile Include="EquipmentGenerator.cs" />
     <Compile Include="ItemIconVisuals.cs" />
+    <Compile Include="Patches\AHItemSlot.cs" />
+    <Compile Include="Patches\AuctionHouseUI.cs" />
+    <Compile Include="Patches\CastBar.cs" />
+    <Compile Include="Patches\ModularParts.cs" />
     <Compile Include="Patches\PlayerControl.cs" />
+    <Compile Include="Patches\QuestDB.cs" />
     <Compile Include="Patches\Smithing.cs" />
     <Compile Include="Patches\TradeWindow.cs" />
     <Compile Include="Patches\HotkeyManager.cs" />
@@ -364,6 +374,7 @@
     <Compile Include="Patches\SimInspect.cs" />
     <Compile Include="Patches\SimItemDisplay.cs" />
     <Compile Include="Patches\SimSelectorSlot.cs" />
+    <Compile Include="Patches\TreasureChestEvent.cs" />
     <Compile Include="Patches\VendorWindow.cs" />
     <Compile Include="Patches\WandBolt.cs" />
     <Compile Include="Skills\ControlChant.cs" />
@@ -387,7 +398,9 @@
     <Compile Include="Skills\TwinSpell.cs" />
     <Compile Include="Patches\UseSkill.cs" />
     <Compile Include="Patches\NPC.cs" />
-    <Compile Include="SpellTargetIndicator.cs" />
+    <Compile Include="CharacterUI\SpellTargetIndicator.cs" />
+    <Compile Include="SpellShieldVisual.cs" />
+    <Compile Include="TheyMightBeGiants.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\Items\90000005.png">
@@ -402,21 +415,42 @@
     <Content Include="Assets\Items\90000015.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Assets\Items\90000019.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Items\90000020.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Items\90000021.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Items\90000022.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Items\90000023.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Assets\Items\MagicPants.png" />
     <Content Include="Assets\Items\MagicPants_Old.png" />
     <Content Include="Assets\Items\MagicPants_Patched.png" />
     <Content Include="Assets\Items\MonkRobe.png" />
     <Content Include="Assets\Items\Sash.png" />
-    <Content Include="Assets\Misc\bar_foreground.png">
+    <Content Include="Assets\Misc\bar.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Assets\Misc\bar_background.png">
+    <Content Include="Assets\Misc\castbar.png" />
+    <Content Include="Assets\Misc\LuckOfSoluna.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\Misc\target_indicator.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Assets\Misc\xtarget_indicator.png" />
+    <Content Include="Assets\Misc\triangleman.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Misc\water.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Assets\Skills\21_2.png" />
     <Content Include="Assets\Skills\28_8.png" />
     <Content Include="Assets\Skills\90000000-90000001.png">
@@ -443,15 +477,55 @@
     <Content Include="Assets\Skills\90000009.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Assets\Skills\90000010-90000011-90000012.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Sounds\backfire.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Sounds\overchant-charge.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Sounds\overchant-release.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Sounds\perfect-release-window.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Sounds\quality-drop.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Sounds\shield-hit-hard.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Sounds\shield-hit-medium.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Sounds\shield-shatter.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Sounds\slowmo.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Sounds\twin-release.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LootHelper.cs" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\BigDamage\BigDamage.csproj">
+      <Project>{deb256da-3c2d-4869-b210-53aad4506f55}</Project>
+      <Name>BigDamage</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy Arcanism.dll "C:\Program Files (x86)\Steam\steamapps\common\Erenshor\BepInEx\scripts\"
-copy Arcanism.pdb "C:\Program Files (x86)\Steam\steamapps\common\Erenshor\BepInEx\scripts\"</PostBuildEvent>
+copy Arcanism.pdb "C:\Program Files (x86)\Steam\steamapps\common\Erenshor\BepInEx\scripts\"
+xcopy /s /e /y /q * "C:\Program Files (x86)\Steam\steamapps\common\Erenshor\BepInEx\plugins\Arcanism"
+copy Arcanism.dll "C:\Program Files (x86)\Steam\steamapps\common\Erenshor\BepInEx\plugins\Arcanism"</PostBuildEvent>
   </PropertyGroup>
 </Project>

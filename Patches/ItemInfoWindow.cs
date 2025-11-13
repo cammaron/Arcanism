@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 namespace Arcanism.Patches
@@ -29,31 +30,18 @@ namespace Arcanism.Patches
 						break;
 				}
 
-				string prefix;
-				string prefixColor;
-				switch (ItemExtensions.GetQualityLevel(_quantity))
-				{
-					case ItemExtensions.Quality.JUNK:
-						prefix = "Junk";
-						prefixColor = "#bbbbbb";
-						break;
-					case ItemExtensions.Quality.SUPERIOR:
-						prefix = "Superior";
-						prefixColor = "#00ffb7";
-						break;
-					case ItemExtensions.Quality.MASTERWORK:
-						prefix = "Masterwork";
-						prefixColor = "#97ff00";
-						break;
-					case ItemExtensions.Quality.NORMAL:
-					default:
-						prefix = null;
-						prefixColor = null;
-						break;
-				}
-
-				if (prefix != null) __instance.ItemName.text = $"<line-height=23><size=13><color={prefixColor}>{prefix}\n</color></size></line-height><size=20>{item.ItemName}</size>";
+				var quality = ItemExtensions.GetQualityLevel(_quantity);
+				
+				if (quality != ItemExtensions.Quality.NORMAL) // I actually feel a little mean writing "if this item is... not normal"
+                {
+					string prefix = ItemExtensions.ToString(quality);
+					string prefixColor = $"#{ColorUtility.ToHtmlStringRGB(ItemExtensions.GetQualityColor(quality))}";
+					__instance.ItemName.text = $"<line-height=23><size=13><color={prefixColor}>{prefix}\n</color></size></line-height><size=20>{item.ItemName}</size>";
+				}	
 			}
+
+			if (item.IsWand)
+				__instance.OtherTextParent.GetComponent<TextMeshProUGUI>().text = "Base DPS: " + Mathf.RoundToInt(item.WeaponDmg / item.WeaponDly).ToString();
 		}
 	}
 }

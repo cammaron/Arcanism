@@ -66,24 +66,4 @@ namespace Arcanism.Patches
 			__state.Item1.ItemValue = __state.Item3;
 		}
 	}
-
-
-	[HarmonyPatch(typeof(AuctionHouseUI), nameof(AuctionHouseUI.OpenListItem))]
-	public class AuctionHouseUI_OpenListItem
-	{
-		public static bool Prefix()
-		{
-			var slot = GameData.SlotToBeListed;
-			var item = slot.MyItem;
-			var blessLevel = ItemExtensions.GetBlessLevel(slot.Quantity);
-			var quality = ItemExtensions.GetQualityLevel(slot.Quantity);
-			if (item.IsUpgradeableEquipment() && (blessLevel > ItemExtensions.Blessing.NONE || quality > ItemExtensions.Quality.NORMAL))
-            {
-				UpdateSocialLog.LogAdd("Due to a limitation in auction workings, blessed/quality items in Arcanism cannot reflect their true value when sold on the AH and thus have been disabled -- vendor sale price has been adjusted to make up for this!", "red");
-				return false;
-            }
-
-			return true;
-		}
-	}
 }

@@ -27,8 +27,14 @@ namespace Arcanism.Patches
 			JUNK = 0, 
 			NORMAL = 1,
 			SUPERIOR = 2,
-			MASTERWORK = 3
+			MASTERWORK = 3,
+			EXQUISITE = 4
 		}
+
+		public static Color JUNK_COLOR = new Color32(187, 187, 187, 255);
+		public static Color SUPERIOR_COLOR = new Color32(120, 199, 250, 255);
+		public static Color MASTERWORK_COLOR = new Color32(151, 255, 0, 255);
+		public static Color EXQUISITE_COLOR = new Color32(255, 62, 162, 255);
 
 		public static bool IsUpgradeableEquipment(this Item i)
         {
@@ -40,27 +46,54 @@ namespace Arcanism.Patches
 			var qual = GetQualityLevel(quantity);
 			if (qual == Quality.NORMAL) return i.ItemName;
 
-
-			string qualString = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(qual.ToString());
-
-			return $"{qualString} {i.ItemName}";
+			return $"{ToString(qual)} {i.ItemName}";
         }
+
+		public static string ToString(Quality q)
+        {
+			return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(q.ToString());
+		}
+
+		public static Color GetQualityColor(int quantity)
+        {
+			return GetQualityColor(GetQualityLevel(quantity));
+		}
+		public static Color GetQualityColor(Quality quality)
+		{
+			switch (quality)
+			{
+				case Quality.JUNK:
+					return JUNK_COLOR;
+				case Quality.SUPERIOR:
+					return SUPERIOR_COLOR;
+				case Quality.MASTERWORK:
+					return MASTERWORK_COLOR;
+				case Quality.EXQUISITE:
+					return EXQUISITE_COLOR;
+				case Quality.NORMAL:
+				default:
+					return Color.white;
+			}
+		}
 
 		public static int GetRealValue(this Item i, int quantity)
         {
 			if (!IsUpgradeableEquipment(i))
-				return i.ItemValue;
-
-		
-			float auctionlessPriceMod = 5f; // because blessed/qual items can't be sold on AH, in addition to being worth more in general, something close to the price you'd get on the AH is baked into their vendor sale value
+				return i.ItemValue; 
+						
+			float auctionlessPriceMod = 5f / .65f; // because blessed/qual items can't be sold on AH, in addition to being worth more in general, something close to the price you'd get on the AH is baked into their vendor sale value
 			float baseValueMod;
-			switch(GetBlessLevel(quantity))
+			int flatValueAdd = 0; // so that blessed/superior/masterwork gear found early in the game is still worth selling
+
+			switch (GetBlessLevel(quantity))
             {
 				case Blessing.BLESSED:
 					baseValueMod = 2f;
+					flatValueAdd = 1000;
 					break;
 				case Blessing.GODLY:
 					baseValueMod = 4f;
+					flatValueAdd = 4000;
 					break;
 				case Blessing.NONE:
 				default:
@@ -74,9 +107,15 @@ namespace Arcanism.Patches
 					break;
 				case Quality.SUPERIOR:
 					baseValueMod *= 1.5f;
+					flatValueAdd += 80;
 					break;
 				case Quality.MASTERWORK:
 					baseValueMod *= 3f;
+					flatValueAdd += 220;
+					break;
+				case Quality.EXQUISITE:
+					baseValueMod *= 5.5f;
+					flatValueAdd += 550;
 					break;
 				case Quality.NORMAL:
 				default:
@@ -84,9 +123,11 @@ namespace Arcanism.Patches
 			}
 
 			if (baseValueMod > 1) // if value has been pumped, it's because it's not listable on AH, so also apply the AHless price mod
+            {
 				baseValueMod *= auctionlessPriceMod;
+			}
 
-			return Mathf.FloorToInt(i.ItemValue * baseValueMod);
+			return Mathf.FloorToInt((i.ItemValue + flatValueAdd) * baseValueMod);
         }
 
 		public readonly struct OriginalItemMeta<T>
@@ -175,6 +216,9 @@ namespace Arcanism.Patches
 				case Quality.MASTERWORK:
 					mod *= 1 + (0.5f * modFactor);
 					break;
+				case Quality.EXQUISITE:
+					mod *= 1 + (1.2f * modFactor);
+					break;
 
 				case Quality.NORMAL:
 				default:
@@ -182,6 +226,44 @@ namespace Arcanism.Patches
 			}
 
 			return mod;
+		}
+
+		public static int ApplyQualityAndBlessToStat(int quantity, int stat, float modFactor = 1f, float deltaFactor = 1f)
+        {
+			if (stat == 0) return 0; // only boostin' stuff that exists, per Brian's intended changes to blessing in v0.2, which I think were a smart call
+
+			float mod = GetMod(quantity, modFactor);
+
+			float newStatValue = stat * mod;
+			float delta = 0;
+
+			// To ensure noticable differences even with low stat items, and also for lil extra flaws or boons, apply some absolute deltas to stats too
+			switch(GetQualityLevel(quantity))
+            {
+				case Quality.SUPERIOR:
+					delta += 1f * deltaFactor;
+					break;
+				case Quality.MASTERWORK:
+					delta += 2f * deltaFactor;
+					break;
+				case Quality.EXQUISITE:
+					delta += 5f * deltaFactor;
+					break;
+				default:
+					break;
+            }
+
+			switch(GetBlessLevel(quantity))
+            {
+				case Blessing.BLESSED:
+					delta += 2f * deltaFactor;
+					break;
+				case Blessing.GODLY:
+					delta += 4f * deltaFactor;
+					break;
+            }
+
+			return Mathf.Max(0, Mathf.FloorToInt(newStatValue + delta)); // floor is a deliberate choice so that junk items and early items are more noticeably impacted. e.g. for stat 4 w/ .7 junk multi = 2.8, now floored down to 2 instead of 3.
 		}
     }
 
@@ -192,8 +274,7 @@ namespace Arcanism.Patches
 
 		static bool Prefix(ref int __result, int _stat, int _qual)
 		{
-			float mod = ItemExtensions.GetMod(_qual, .5f); // Weapon damage is less affected by quality/blessing so as not to be OP
-			__result = Mathf.RoundToInt(_stat * mod); 
+			__result = ItemExtensions.ApplyQualityAndBlessToStat(_qual, _stat, .5f, 1f); // Weapon damage is less affected by quality/blessing so as not to be OP
 			return false;
 		}
 	}
@@ -229,6 +310,10 @@ namespace Arcanism.Patches
 					if (__instance.ItemLevel > 16) res += 2;
 					else res += 1;
 					break;
+				case ItemExtensions.Quality.EXQUISITE:
+					if (__instance.ItemLevel > 16) res += 4;
+					else res += 2;
+					break;
 			}
 			__result = res;
 			return false;
@@ -252,8 +337,8 @@ namespace Arcanism.Patches
 				__result = _stat;
 				return false;
 			}*/
-			float mod = ItemExtensions.GetMod(_qual);
-			__result = Mathf.RoundToInt(_stat * mod);
+			__result = ItemExtensions.ApplyQualityAndBlessToStat(_qual, _stat);
+
 			return false;
 		}
 	}
@@ -264,8 +349,7 @@ namespace Arcanism.Patches
 
 		static bool Prefix(Item __instance, ref int __result, int _stat, int _qual)
 		{
-			float mod = ItemExtensions.GetMod(_qual, .5f);
-			__result = Mathf.RoundToInt(_stat * mod);
+			__result = ItemExtensions.ApplyQualityAndBlessToStat(_qual, _stat, .5f, 2f);
 			return false;
 		}
 	}

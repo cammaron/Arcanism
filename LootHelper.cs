@@ -1,5 +1,6 @@
 ﻿using Arcanism.Patches;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using static Arcanism.Patches.ItemExtensions;
 
@@ -21,21 +22,27 @@ namespace Arcanism
         public LootTable lootTable;
         public List<(Item item, Blessing blessLevel, Quality quality)> itemMeta;
         protected NPC npc;
-        protected bool containsSpecialLoot = false;
+        protected TreasureChestEvent treasureChest;
         protected bool finished = false;
 
         protected void Awake()
         {
             npc = GetComponent<NPC>();
+            treasureChest = GetComponent<TreasureChestEvent>();
         }
 
         protected void Update()
         {
-            if (!finished && (npc == null || npc.GetChar().IsDead()))
+            if (!finished && (IsOpenChest() || npc == null || npc.GetChar().IsDead()))
             {
+                UpdateLootQuality();
                 CreateCorpseGlow();
                 finished = true;
             }
+        }
+
+        private bool IsOpenChest() {
+            return treasureChest != null && (treasureChest.Lid == null || !treasureChest.Lid.activeSelf);
         }
 
         /* Like most data, enemy drops are defined in their ScriptableObjects and loaded at runtime, so changing them requires injecting via code.
@@ -72,16 +79,25 @@ namespace Arcanism
                                 break;
                         }
 
-                        if (!relevantList.Contains(drop.Item2)) // I don't think NPCs get recycled from a pool at the moment, but just in case, don't wanna be doubling up
+                        if (!relevantList.Contains(drop.Item2)) // I don't *think* NPCs get recycled from a pool at time of writing, but just in case, don't wanna be doubling up
                             relevantList.Add(drop.Item2);
                     }
                 }
             }
         }
 
-        // Returns true if any special items generated
         public void UpdateLootQuality()
         {
+            if (itemMeta != null) return;
+
+            float lootRate = GetLootRateMulti();
+            if (lootRate > GameData.ServerLootRate) // for this particular instance, loot rate is higher (maybe giant or supermassive), which means the actual InitLootTable method needs to be re-run with the right rate
+            {
+                lootTable.ActualDrops.Clear();
+                lootTable.ActualDropsQual.Clear();
+                lootTable.RegenerateLoot(lootRate);
+            }
+
             itemMeta = new List<(Item, Blessing, Quality)>(lootTable.ActualDrops.Count);
             
             foreach(var item in lootTable.ActualDrops)
@@ -92,8 +108,8 @@ namespace Arcanism
                     continue;
                 }
 
-                var blessLevel = ShouldBless() ? Blessing.BLESSED : Blessing.NONE;
-                var qualityLevel = GenerateQualityLevel();
+                var blessLevel = ShouldBless(lootRate) ? Blessing.BLESSED : Blessing.NONE;
+                var qualityLevel = GenerateQualityLevel(lootRate);
                 itemMeta.Add((item, blessLevel, qualityLevel));
             }
 
@@ -101,16 +117,14 @@ namespace Arcanism
             {
                 lootTable.ActualDropsQual[i] = 1; // actual drops qual stores the Random(0,100) that determines whether an item will become blessed when LootWindow opens. 0 = blessed. Setting to 1 so we don't double up with my own code.
             }
-
-            this.containsSpecialLoot = lootTable.special;
-            lootTable.special = false; // we'll be handling the glow ourselves
         }
 
-        public void CreateCorpseGlow()
+        protected void CreateCorpseGlow()
         {
             var glow = CorpseGlow.NONE;
             foreach (var meta in itemMeta)
             {
+                if (meta.item == null) continue; // shouldn't happen, but been getting some NPEs from somewhere in here
                 if (meta.item.RequiredSlot == Item.SlotType.Charm || GameData.GM.WorldDropMolds.Contains(meta.item))
                     glow = MaybeUpgradeCorpseGlow(glow, CorpseGlow.MISC);
                 
@@ -120,23 +134,20 @@ namespace Arcanism
                 if (meta.quality == Quality.MASTERWORK)
                     glow = MaybeUpgradeCorpseGlow(glow, CorpseGlow.MASTERWORK);
 
-                if (meta.blessLevel == Blessing.BLESSED || meta.blessLevel == Blessing.GODLY|| meta.item == GameData.GM.PlanarShard)
+                if (meta.blessLevel == Blessing.BLESSED || meta.blessLevel == Blessing.GODLY || meta.item == GameData.GM.PlanarShard)
                     glow = MaybeUpgradeCorpseGlow(glow, CorpseGlow.BLESSED);
 
                 if (GameData.GM.Maps.Contains(meta.item))
                     glow = MaybeUpgradeCorpseGlow(glow, CorpseGlow.MAP);
 
-                if (meta.item == GameData.GM.Sivak || meta.item == GameData.GM.Planar)
+                if (meta.item == GameData.GM.Sivak || meta.item == GameData.GM.Planar || meta.quality == Quality.EXQUISITE)
                     glow = MaybeUpgradeCorpseGlow(glow, CorpseGlow.SIVAK);
             }
 
             if (glow == CorpseGlow.NONE)
-            {
-                if (!containsSpecialLoot) // this is just in case new stuff is added to the game that doesn't fit the above criteria but is still meant to glow
-                    return;
-                glow = CorpseGlow.BLESSED;
-            }
+                return;
 
+            if (lootTable == null) return; // shouldn't happen, but been getting some NPEs from somewhere in here
             var parent = lootTable.transform;
             ParticleSystem beam = Instantiate(GameData.GM.SpecialLootBeam, parent.position + Vector3.up * 0.3f, parent.rotation).GetComponent<ParticleSystem>();
             beam.transform.SetParent(parent);
@@ -163,12 +174,12 @@ namespace Arcanism
                 case CorpseGlow.SUPERIOR:
                     scaleX = 1.25f;
                     scaleY = 0.5f;
-                    color = ItemIconVisuals.SUPERIOR_COLOR;
+                    color = SUPERIOR_COLOR;
                     break;
                 case CorpseGlow.MASTERWORK:
                     scaleX = 1.25f;
                     scaleY = 0.5f;
-                    color = ItemIconVisuals.MASTERWORK_COLOR;
+                    color = MASTERWORK_COLOR;
                     break;
                 case CorpseGlow.MAP:
                     scaleX = 1.25f;
@@ -194,6 +205,7 @@ namespace Arcanism
             var main = beam.main;
             var emission = beam.emission;
             var rotationLifetime = beam.rotationOverLifetime;
+            var colorLifetime = beam.colorOverLifetime;
 
             main.prewarm = true;
             main.startSize = 2;
@@ -206,7 +218,12 @@ namespace Arcanism
             rotationLifetime.x = rotationLifetime.z = 0f;
             rotationLifetime.y = 7.5f;
 
-            if (color.HasValue) main.startColor = new ParticleSystem.MinMaxGradient(new Color32(color.Value.r, color.Value.g, color.Value.b, 30));
+            if (color.HasValue)
+            {
+                main.startColor = new ParticleSystem.MinMaxGradient(new Color32(color.Value.r, color.Value.g, color.Value.b, 30));
+                colorLifetime.enabled = false;
+            }
+            npc?.GetChar()?.MyAudio?.PlayOneShot(Main.sfxByName["quality-drop"], GameData.SFXVol * .7f);
         }
 
         CorpseGlow MaybeUpgradeCorpseGlow(CorpseGlow original, CorpseGlow newVal)
@@ -235,22 +252,66 @@ namespace Arcanism
             }
         }
 
-        protected bool ShouldBless()
+        protected bool ShouldBless(float lootRate)
         {
-            return Random.Range(0, 100) == 0;
+            float percentChance = 1.5f * lootRate; // vanilla is 1%, but too rare imo
+
+            if (npc != null && npc.GetChar().MyStats != null)
+            {
+                bool hurtByPlayer = npc.AggroTable != null && npc.AggroTable.Exists(aggro => aggro != null && aggro.Player != null && aggro.Player.transform.name == "Player");
+                var luckSpellIds = new List<string>() {
+                    SpellDB_Start.LUCK_OF_SOLUNA_1_SPELL_ID,
+                    SpellDB_Start.LUCK_OF_SOLUNA_2_SPELL_ID,
+                    SpellDB_Start.LUCK_OF_SOLUNA_3_SPELL_ID,
+                    SpellDB_Start.LUCK_OF_SOLUNA_4_SPELL_ID,
+                    SpellDB_Start.LUCK_OF_SOLUNA_5_SPELL_ID,
+                };
+
+                var luckOfSoluna = GameData.PlayerStats.StatusEffects.FirstOrDefault(se => se?.Effect != null && luckSpellIds.Contains(se.Effect.Id));
+                if (luckOfSoluna != default)
+                {
+                    var enemyLevel = npc.GetChar().MyStats.Level;
+                    int maxEnemyLevelForSolunaBuff = luckOfSoluna.Effect.RequiredLevel - 1;
+
+                    if (enemyLevel <= maxEnemyLevelForSolunaBuff)
+                        percentChance *= 3f;
+                }
+            }
+            
+            return Random.Range(0f, 1f) * 100f <= percentChance;
         }
 
-        protected Quality GenerateQualityLevel()
+        protected Quality GenerateQualityLevel(float lootRate)
         {
-            var chance = Random.Range(0, 100);
-            if (chance < 1.5f)
+            var roll = Random.Range(0f, 1f) * 100f;
+            roll /= lootRate;
+            
+            if (roll <= .5f)
+                return Quality.EXQUISITE;
+            else if (roll <= 3f)
                 return Quality.MASTERWORK;
-            else if (chance < 8f)
+            else if (roll <= 15f)
                 return Quality.SUPERIOR;
-            else if (chance < 28)
+            else if (roll >= 80)
                 return Quality.JUNK;
             
             return Quality.NORMAL;
+        }
+
+        protected float GetLootRateMulti()
+        {
+            float rate = GameData.ServerLootRate;
+
+            var maybeGiant = GetComponent<TheyMightBeGiants>();
+            if (maybeGiant != null)
+            {
+                if (maybeGiant.GetState() == TheyMightBeGiants.State.GIANT)
+                    rate *= 4f;
+                else if (maybeGiant.GetState() == TheyMightBeGiants.State.SUPERMASSIVE)
+                    rate *= 8f;
+            }
+            
+            return rate;
         }
     }
 }

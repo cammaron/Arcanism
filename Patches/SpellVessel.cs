@@ -2,8 +2,11 @@
 using UnityEngine.UI;
 using HarmonyLib;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection.Emit;
 using Arcanism.SkillExtension;
+using UnityEngine.SceneManagement;
+using Arcanism.CharacterUI;
 
 namespace Arcanism.Patches
 {
@@ -68,6 +71,12 @@ namespace Arcanism.Patches
 
         static bool Prefix(SpellVessel __instance, CastSpell ___SpellSource, ref float ___scaleDmg)
         {
+            // Whilst a caster only ever has one "current spell vessel," it's actually possible for there to be multiple SpellVessels that still stem from the SpellSource i.e. caster, because
+            // of things like spell procs from weapons -- they occur on their own vessel instance.
+            // Thus, before proceeding with any skill extension logic, check if it's the real vessel and not a proc, and if it is, just let it carry on as normal.
+            SpellVessel casterMainVessel = Traverse.Create(___SpellSource).Field<SpellVessel>("CurrentVessel").Value;
+            if (__instance.isProc || __instance != casterMainVessel) return true; 
+
             var damageModifier = ___SpellSource.MyChar.GetComponent<ISpellDamageModifier>();
             if (damageModifier != null)
                 ___scaleDmg = damageModifier.GetSpellDamageMulti();
@@ -168,24 +177,39 @@ namespace Arcanism.Patches
     [HarmonyPatch(typeof(SpellVessel), "EndSpell")]
     class SpellVessel_EndSpell
     {
-        static bool Prefix(SpellVessel __instance, CastSpell ___SpellSource, ref Stats ___targ, ref float ___CDMult)
+        static bool Prefix(SpellVessel __instance, CastSpell ___SpellSource, ref Stats ___targ, ref float ___CDMult, bool ___resonating)
         {
-            var nextTarget = ___SpellSource.MyChar.GetComponent<IRetargetingSkill>()?.GetNextTarget();
-            if (nextTarget != null) /* If an IRetargetingSkill was used and there are still more targets, cancel EndSpell, update target, resolve again 'til no targets left */
+            if (__instance.isProc) // Don't want procs interfering with other casting flow e.g. closing cast bar
+                return true;
+
+            // a caster can have multiple vessels and the "currentvessel" can change when spells resonate, so what matters is the vessel *relating to* the skill.
+            var isUsingCastingSkill = __instance == ___SpellSource.MyChar.GetComponent<ExtendedSkill>()?.Vessel; 
+            
+            if (isUsingCastingSkill)
             {
-                ___targ = nextTarget.MyStats;
-                __instance.ResolveEarly();
-                return false;
+                var nextTarget = ___SpellSource.MyChar.GetComponent<IRetargetingSkill>()?.GetNextTarget();
+                if (nextTarget != null) /* If an IRetargetingSkill was used and there are still more targets, cancel EndSpell, update target, resolve again 'til no targets left */
+                {
+                    ___targ = nextTarget.MyStats;
+                    __instance.ResolveEarly();
+                    return false;
+                }
             }
-
-            // There are instances in which we end up in EndSpell now without going through ResolveSpell, so the state clean-up -- removing the cast bar -- should happen here.
+            
+            // There are instances in which we end up in EndSpell now without going through ResolveSpell such as backfiring, so the state clean-up (removing the cast bar) should happen here.
             if (___SpellSource.MyChar.MySkills.isPlayer) GameData.CB.CloseBar();
-
-            var cdModifier = ___SpellSource.MyChar.GetComponent<ISpellCooldownModifier>();
-            if (cdModifier != null)
-                ___CDMult = cdModifier.GetSpellCooldownMulti();
-
-            ___SpellSource.MyChar.GetCooldownManager().AddCooldown(__instance.spell, ___CDMult);
+            
+            if (!___resonating) // Only the initial cast should trigger cooldown; resonating spells are actually separate casts with their own vessel and stuff
+            {
+                if (isUsingCastingSkill)
+                {
+                    var cdModifier = ___SpellSource.MyChar.GetComponent<ISpellCooldownModifier>();
+                    if (cdModifier != null)
+                        ___CDMult = cdModifier.GetSpellCooldownMulti();
+                }
+                
+                ___SpellSource.MyChar.GetCooldownManager().AddCooldown(__instance.spell, ___CDMult);
+            }
 
             return true;
         }
@@ -194,16 +218,112 @@ namespace Arcanism.Patches
     [HarmonyPatch(typeof(SpellVessel), "Update")]
     class SpellVessel_Update
     {
-        
+
         static void Prefix(SpellVessel __instance, CastSpell ___SpellSource, ref Stats ___targ)
         {
             if (!___SpellSource.isPlayer) return;
+
+            // Quick hack for players only: disable flinch while casting to prevent that annoying bug where you get hurt and continue casting but standing still
+            ___SpellSource.MyChar.NoFlinch = true;
 
             IEnumerable<Character> allTargs = ___SpellSource.MyChar.GetComponent<IRetargetingSkill>()?.GetAllTargets();
             if (allTargs == null)
                 allTargs = new List<Character>() { ___targ.Myself };
 
-            allTargs.Do(t => t.GetComponentInChildren<SpellTargetIndicator>()?.AddTargetSource(__instance));
+            allTargs.Do(t => t.GetComponentInChildren<CharacterHoverUI>()?.SpellTargetIndicator.AddTargetSource(__instance));
+        }
+    }
+
+    [HarmonyPatch(typeof(SpellVessel), "OnDestroy")]
+    class SpellVessel_OnDestroy
+    {
+
+        static void Prefix(SpellVessel __instance, CastSpell ___SpellSource, ref Stats ___targ)
+        {
+            if (!___SpellSource.isPlayer) return;
+
+            ___SpellSource.MyChar.NoFlinch = false;
+        }
+    }
+
+    [HarmonyPatch(typeof(SpellVessel), "DoMiscSpells")]
+    class SpellVessel_DoMiscSpells
+    {
+
+        static bool Prefix(SpellVessel __instance)
+        {
+            foreach (var mapId in new List<ItemId>() { ItemId.FULL_MAP_1, ItemId.FULL_MAP_2, ItemId.FULL_MAP_3, ItemId.FULL_MAP_4 })
+            {
+                var mapItem = GameData.ItemDB.GetItemByID(mapId);
+                if (__instance.spell == mapItem.ItemEffectOnClick)
+                {
+                    BeginTreasureHunt(mapItem);
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public static GameObject TreasureHuntChest = null;
+
+        static void BeginTreasureHunt(Item relevantMap)
+        {
+            // Based on TreasureHunting.SetTreasureZone, but doing it based on map type used instead of player level.
+            var hunt = GameData.GM.GetComponent<TreasureHunting>();
+            var possibleZones = new List<(string zoneId, string displayName)>() { // the default array is... not in a logical order... so doing this so zones are ordered appropriately for treasure hunts.
+                ("Hidden", "Hidden Hills"),
+                ("Brake", "Faerie's Brake"),
+                ("Duskenlight", "Duskenlight Coast"),
+                ("FernallaField", "Fernalla's Revival Plains"),
+                ("Silkengrass", "Silkengrass Meadows"),
+                ("Braxonian", "Braxonian Desert"),
+                ("Loomingwood", "Loomingwood Forest"),
+                ("Soluna", "Soluna's Landing"),
+                ("Blight", "The Blight")
+            };
+            hunt.TreasureLoc = Vector3.zero;
+
+            int zoneIndex;
+
+            if (relevantMap.Id == ItemId.FULL_MAP_1.Id())
+            {
+                zoneIndex = Random.Range(0, 2);
+                TreasureHuntChest = GameData.Misc.TreasureChest0_10;
+                TreasureHuntChest.GetComponent<LootTable>().MinGold = 2500;
+                TreasureHuntChest.GetComponent<LootTable>().MaxGold = 5000;
+                // Stash: highwayman raider, priel bandit recruit, highwayman marauder -- buuuut can't get references to them so fuck it, generic enemies for all
+            }
+            else if (relevantMap.Id == ItemId.FULL_MAP_2.Id())
+            {
+                zoneIndex = Random.Range(2, 4);
+                TreasureHuntChest = GameData.Misc.TreasureChest10_20;
+                TreasureHuntChest.GetComponent<LootTable>().MinGold = 8000;
+                TreasureHuntChest.GetComponent<LootTable>().MaxGold = 16000;
+                // Pirate treasure: lost sea giant, restless spirit, islander bandit, drowned corpse, 
+            }
+            else if (relevantMap.Id == ItemId.FULL_MAP_3.Id())
+            {
+                zoneIndex = Random.Range(3, 6);
+                TreasureHuntChest = GameData.Misc.TreasureChest20_30;
+                TreasureHuntChest.GetComponent<LootTable>().MinGold = 15000;
+                TreasureHuntChest.GetComponent<LootTable>().MaxGold = 30000;
+                // cursed dig site:  default chest enemies
+            }
+            else // must be map 4!
+            {
+                zoneIndex = Random.Range(5, 10);
+                TreasureHuntChest = GameData.Misc.TreasureChest30_35;
+                TreasureHuntChest.GetComponent<LootTable>().MinGold = 80000;
+                TreasureHuntChest.GetComponent<LootTable>().MaxGold = 160000;
+                // vithean cache: vithean betrayor, cursed v. traitor, cursed v. conspiror
+            }
+
+            hunt.TreasureZone = possibleZones[zoneIndex].zoneId;
+            UpdateSocialLog.LogAdd("The treasure appears to be in " + possibleZones[zoneIndex].displayName + ".", "yellow");
+
+            if (hunt.TreasureZone == SceneManager.GetActiveScene().name)
+                hunt.SetTreasureLoc();
         }
     }
 }
