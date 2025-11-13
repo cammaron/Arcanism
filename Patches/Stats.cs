@@ -63,8 +63,10 @@ namespace Arcanism.Patches
 	[HarmonyPatch(typeof(Stats), "Update")]
 	public class Stats_Update
 	{
-		public static void Prefix(bool ___medMsg)
+		public const float RECENT_DAMAGE_HACK = 0.1f; // medMsg gets reset to false if RecentDamage is 0, so in order to keep hiding that meditative state msg, never letting it go below 0.1 (and treating 0.1 as 0 in my regen code)
+		public static void Prefix(ref bool ___medMsg, ref float ___RecentDmg)
         {
+			___RecentDmg = RECENT_DAMAGE_HACK;
 			___medMsg = true;  // to prevent meditative state msg ever showing as I'm controlling this logic myself now
         }
 	}
@@ -79,7 +81,7 @@ namespace Arcanism.Patches
 	[HarmonyPatch(typeof(Stats), "RegenEffects")]
 	public class Stats_RegenEffects
 	{
-		public const float RESTING_REGEN_MULTI = 2.5f;
+		public const float RESTING_REGEN_MULTI = 3.5f;
 
 		protected static bool AlreadyResting = false;
 
@@ -100,7 +102,7 @@ namespace Arcanism.Patches
 			bool isPlayer = (stats.Myself.MySkills?.isPlayer).GetValueOrDefault(false);
 			bool isSitting = (stats.Myself.MyNPC?.ThisSim?.sitting).GetValueOrDefault(false) || (isPlayer && GameData.PlayerControl.Sitting);
 
-			if (isSitting && stats.RecentCast <= 0f && stats.RecentDmg <= 0f)
+			if (isSitting && stats.RecentCast <= 0f && stats.RecentDmg <= Stats_Update.RECENT_DAMAGE_HACK)
 			{
 				if (isPlayer && !AlreadyResting)
                 {
@@ -120,7 +122,7 @@ namespace Arcanism.Patches
 			return 1f;
 		}
 
-		static bool Prefix(Stats __instance, float _mod, ref int ___CurrentHP, int ___CurrentMaxHP, ref int ___CurrentMana, int ___CurrentMaxMana)
+		public static bool Prefix(Stats __instance, float _mod, ref int ___CurrentHP, int ___CurrentMaxHP, ref int ___CurrentMana, int ___CurrentMaxMana, float ___TickTime)
 		{
 			float regenMulti = GetCurrentRegenMulti(__instance);
 			

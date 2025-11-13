@@ -72,7 +72,6 @@ namespace Arcanism.Patches
 					}
 
 					char propPrefix = subs[0][0];
-					UpdateSocialLog.LogAdd("Doin' substring on " + subs[0]);
 					string prop = subs[0].Substring(1, subs[0].Length - 1);
 					if (propPrefix == 'c')
                     {
