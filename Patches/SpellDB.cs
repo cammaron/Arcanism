@@ -123,12 +123,12 @@ namespace Arcanism.Patches
 			UpdateTargetSpell(__instance, "34664684", 70, 145, 3f, 6); // Brax's Touch 
 			WithScreenshake(UpdateTargetSpell(__instance, "441842", 170, 510, 7, 24, null, 185)); // Ethereal Rending -- passing incorrect description param
 			UpdateTargetSpell(__instance, BRAXS_RAGE_SPELL_ID, 280, 665, 3f, 6); // Brax's Rage 
-			WithScreenshake(UpdateTargetSpell(__instance, "63468487", 300, 1550, 7.5f, 24f)); // Winter's Bite 
+			WithScreenshake(UpdateTargetSpell(__instance, "63468487", 300, 1550, 7f, 24f)); // Winter's Bite 
 			UpdateTargetSpell(__instance, "5069675", 180, 360, 0.5f, 2); // Ice Shock 
 			WithScreenshake(UpdateTargetSpell(__instance, "4343577", 600, 1920, 5f, 12)); // Ice Spear 
 			UpdateTargetSpell(__instance, BRAXS_FURY_SPELL_ID, 600, 1300, 1f, 1.5f); // Brax's Fury 
 			WithScreenshake(UpdateTargetSpell(__instance, "51152210", 1400, 2880, 3f, 7, null, 1600), 0.6f, 0.2f); // Aetherstorm -- passing incorrect description param
-			WithScreenshake(UpdateTargetSpell(__instance, "48295394", 2000, 6000, 8.5f, 36), 1.75f, 0.35f); // Tenebris 
+			WithScreenshake(UpdateTargetSpell(__instance, "48295394", 2500, 6000, 6f, 18), 1.75f, 0.35f); // Tenebris 
 
 			UpdateTargetSpell(__instance, "57673295", 360, 1400, 1, 3); // Mithril Shards -- only used on weapons
 

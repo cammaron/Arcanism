@@ -16,15 +16,15 @@ namespace Arcanism.Skills
         public static readonly float EXTRA_COOLDOWN_FACTOR = 0.75f;
 
         public static readonly float BEYOND_CHANT_CAST_TIME_FACTOR = 1f;
-        public static readonly float BEYOND_CHANT_DAMAGE_FACTOR = 0.25f;  // Multiplicative with total damage -- so (damage + (damage*EXTRA_DAMAGE_FACTOR)) * BEYOND_CHANT_DAMAGE_FACTOR
+        public static readonly float BEYOND_CHANT_DAMAGE_FACTOR = 0.3f;  // Multiplicative with total damage -- so (damage + (damage*EXTRA_DAMAGE_FACTOR)) * BEYOND_CHANT_DAMAGE_FACTOR
         public static readonly float BEYOND_CHANT_MANA_COST_FACTOR = 1f;
 
         // 2.5% extra damage per second chanting over 6 seconds.
         // For a 5s spell, before BC, this is 5% dmg increase. AFter BC, 18.8%.
         // For a 6s spell, before BC, this is 9% dmg increase. AFter BC, 26%.
         // For an 8s spell, before BC 18%. After, 44%.
-        public static readonly float TIME_IS_POWER_EXPONENT = 1.025f; 
-        public static readonly float SECONDS_BEFORE_TIME_IS_POWER = 6f;
+        public static readonly float TIME_IS_POWER_EXPONENT = 1.027f; 
+        public static readonly float SECONDS_BEFORE_TIME_IS_POWER = 5f;
 
         public static readonly float PERFECT_RELEASE_TIMING_FACTOR = 0.022f; //.03f
 
@@ -87,6 +87,8 @@ namespace Arcanism.Skills
         protected bool knowsTimeIsPower3;
         protected bool knowsExpertControl2;
         protected int expertControlPower;
+
+        protected float originalCastBarFontSize;
 
         public static void CreateExtension(Skill coreSkill)
         {
@@ -182,6 +184,8 @@ namespace Arcanism.Skills
                 chargeAudioSource = new GameObject("ChargeAudio").AddComponent<AudioSource>();
                 chargeAudioSource.transform.SetParent(caster.transform);
 
+                originalCastBarFontSize = GameData.CB.OCTxt.fontSize;
+
                 state = State.ACTIVATED;
             }
 
@@ -201,6 +205,8 @@ namespace Arcanism.Skills
 
         protected void OnDestroy()
         {
+            GameData.CB.OCTxt.color = Color.white;
+            GameData.CB.OCTxt.fontSize = originalCastBarFontSize;
             if (castBar != null) castBar.color = NORMAL_CAST_COLOR;
             if (overchantBar != null) overchantBar.color = OVER_CAST_COLOR;
             if (chargeAudioSource != null) Destroy(chargeAudioSource.gameObject);
@@ -236,7 +242,7 @@ namespace Arcanism.Skills
                             float timePerColour = timePerFullCycle / 2f;
                             GameData.CB.OCTxt.color = Time.realtimeSinceStartup % timePerFullCycle <= timePerColour ? Color.red : Color.white;
                             GameData.CB.OCTxt.transform.gameObject.SetActive(true);
-                            GameData.CB.OCTxt.fontSize = 48;
+                            GameData.CB.OCTxt.fontSize = 48f;
                         }
 
                         if (remainingSpareMana <= 0) // At least enough mana to finish casting the spell (which isn't deducted 'til execution time) must remain in the bank
