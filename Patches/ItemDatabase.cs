@@ -12,7 +12,7 @@ namespace Arcanism.Patches
         FLAMESOLES = 24495417,
         ELDERS_SLIPPERS = 12898230,
         SHADOWSTEP_SHOES = 27008672,
-        BRAXONIAN_ROYAL_SHOES = 12898230,
+        BRAXONIAN_ROYAL_SHOES = 59276768,
         PIOUS_SANDALS = 2562654,
 
         //Pants
@@ -830,13 +830,13 @@ namespace Arcanism.Patches
             new EquipmentGenerator
             {
                 Id = ItemId.PETRIFIED_WOOD_CANE,
-                HP = 650,
-                Mana = 800,
-                AC = 40,
-                End = 13,
-                Int = 55,
+                HP = 280,
+                Mana = 600,
+                AC = 22,
+                End = 4,
+                Int = 30,
                 Wis = 30,
-                Cha = 45,
+                Cha = 30,
                 Res = 10,
                 WeaponType = Item.WeaponType.TwoHandStaff,
                 SlotType = Item.SlotType.Primary,
@@ -866,8 +866,11 @@ namespace Arcanism.Patches
             // However, rebalancing it a bit. Same HP/Mana, dropping AC from 100, and buffing other stats
             // DPS Goal: 480~ average. Aetherstorm = 2880 dmg, 10% chance/sec = 288, so add 190~ raw dps
             // On paper this might not look as strong as garg, which I think makes it interesting now. Great stats, hard to pass up, less consistent damage, but ACTUALLY higher DPS on average overall.
-            // That's before taking into account that Aetherstorm proc can *resonate*, increasing that damage by a decent margin in endgame (maybe 620ish avg DPS total)
-            new EquipmentGenerator { Id = ItemId.SINGULARITY_VESSEL_OF_CREATION, HP = 500, Mana = 355, AC = 40, Int = 40, Wis = 14, Cha = 34, Res = 6 }.TuneWand(190, 1, 25, null, 10).Generate(__instance);
+            // That's before taking into account that Aetherstorm proc can *resonate*, increasing that damage by a decent margin in endgame (maybe 620ish avg DPS total) 
+            // [21/11/2025: Brought raw dps from 190 to 250, bringing total avg dps to 538 on average. That's because battles don't tend to go as long at this point in the game,
+            // so a "powerful infrequent proc" which happens to balance damage on avg is less useful. I would even have increased it further, but for the same exact reason, the fact
+             // it attacks once per second (2x garg speed) makes up for any further damage loss, as it's handier for clearing weaker enemies]
+            new EquipmentGenerator { Id = ItemId.SINGULARITY_VESSEL_OF_CREATION, HP = 500, Mana = 355, AC = 40, Int = 40, Wis = 14, Cha = 34, Res = 6 }.TuneWand(250, 1, 25, null, 10).Generate(__instance);
         }
 
         public static void RegisterSets(ItemDatabase itemDb)
