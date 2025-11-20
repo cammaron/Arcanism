@@ -442,11 +442,11 @@ namespace Arcanism.Patches
                 Mana = 250,
                 AC = 30,
                 End = 10,
-                Int = 35,
+                Int = 30,
                 Wis = 25,
-                Cha = 25,
+                Cha = 30,
                 Res = 4,
-                Value = 26500,
+                Value = 27500,
                 AppearanceType = "ClothPants",
                 ColorsMain = (new Color32(80, 55, 80, 255), new Color32(190, 150, 0, 255)),
                 ColorsLeather = (new Color32(80, 55, 80, 255), new Color32(190, 150, 0, 255)),
@@ -524,9 +524,9 @@ namespace Arcanism.Patches
                 Value = 8500,
                 Classes = new List<Class>() { GameData.ClassDB.Arcanist }
             }.Generate(__instance)));
-            new EquipmentGenerator { Id = ItemId.FLOWING_BLIGHT_SILK_SASH, HP = 10, Mana = 300, AC = 8, Str = 0, Dex = 0, Agi = 0, End = 0, Int = 15, Wis = 28, Cha = 8, Value = 11200, Res = 2 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.CHARMED_BELT, HP = 200, Mana = 255, AC = 25, End = 10, Int = 14, Wis = 9, Cha = 23, Res = 4, Value = 11200 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.ROYAL_WAISTBAND, HP = 500, Mana = 180, AC = 60, End = 18, Int = 18, Wis = 9, Cha = 18, Value = 13500, Res = 3 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.CHARMED_BELT, HP = 180, Mana = 200, AC = 16, End = 5, Agi = 5, Int = 12, Wis = 9, Cha = 23, Res = 2, Value = 11200 }.Generate(__instance); 
+            new EquipmentGenerator { Id = ItemId.FLOWING_BLIGHT_SILK_SASH, HP = 10, Mana = 300, AC = 0, Str = 0, Dex = 0, Agi = 10, End = 0, Int = 18, Wis = 18, Cha = 18, Value = 15500, Res = 3 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.ROYAL_WAISTBAND, HP = 240, Mana = 200, AC = 30, End = 18, Agi=5, Int = 18, Wis = 9, Cha = 18, Value = 17800, Res = 3 }.Generate(__instance);
             itemsToAdd.Add(DroppedBy(NpcName.BLIGHT_WYRM, DropChance.GUARANTEE_ONE, new EquipmentGenerator
             {
                 CreateFromBaseId = ItemId.BRAXONIAN_SASH,
@@ -534,16 +534,17 @@ namespace Arcanism.Patches
                 Name = "Vizier's Lament",
                 Lore = "After the Blight Wyrm simply refused to listen to diplomacy, the vizier was said to have... well, died. And been eaten. This thing still smells a bit.",
                 Level = 38,
-                HP = 380,
-                Mana = 350,
-                AC = 43,
-                End = 10,
-                Int = 21,
-                Wis = 25,
-                Cha = 20,
-                Res = 3,
-                Value = 26000,
-                Classes = new List<Class>() { GameData.ClassDB.Arcanist }
+                HP = 100,
+                Mana = 450,
+                AC = 10,
+                End = 5,
+                Agi = 15,
+                Int = 28,
+                Wis = 12,
+                Cha = 36,
+                Res = 5,
+                Value = 30000,
+                Classes = new List<Class>() { GameData.ClassDB.Arcanist, GameData.ClassDB.Stormcaller }
             }.Generate(__instance)));
         }
 
@@ -570,7 +571,7 @@ namespace Arcanism.Patches
             new EquipmentGenerator { Id = ItemId.BRAXONIAN_BRACELET, HP = 100, Mana = 150, AC = 22, End = 12, Int = 19, Wis = 20, Cha = 8, Res = 2 }.Generate(__instance);
             new EquipmentGenerator { Id = ItemId.BLESSED_BRAXONIAN_BRACELET, HP = 150, Mana = 200, AC = 30, End = 14, Int = 24, Wis = 24, Cha = 11, Res = 3, Value = 11000 }.Generate(__instance);
             new EquipmentGenerator { Id = ItemId.PERFECT_LINKS, HP = 80, Mana = 200, AC = 15, Int = 6, Wis = 12, Cha = 26, Res = 5 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.WARDED_BRACE, HP = 500, Mana = 200, End = 15, AC = 70, Int = 11, Wis = 18, Cha = 5, Res = 3 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.WARDED_BRACE, HP = 500, Mana = 200, End = 15, AC = 70, Int = 5, Wis = 14, Cha = 5, Res = 3 }.Generate(__instance);
             new EquipmentGenerator { Id = ItemId.GARDENERS_WRIST_WRAP, HP = 220, Mana = 400, Int = 15, Wis = 30, Cha = 7, Res = 1 }.Generate(__instance);
             new EquipmentGenerator { Id = ItemId.BRACELET_OF_VESSEL, HP = 50, Mana = 300, AC = 12, Int = 26, Wis = 0, Cha = 20, Res = 4 }.Generate(__instance);
             new EquipmentGenerator { Id = ItemId.RESONATING_BRACE, HP = 0, Mana = 300, AC = 40, Int = 5, Wis = 8, Cha = 5, Res = 8 }.Generate(__instance);
