@@ -42,6 +42,11 @@ namespace Arcanism.Patches
 
 			if (item.IsWand)
 				__instance.OtherTextParent.GetComponent<TextMeshProUGUI>().text = "Base DPS: " + Mathf.RoundToInt(item.WeaponDmg / item.WeaponDly).ToString();
+
+			__instance.MR.text = "+" + Inventory_UpdateInvStats.CalcResistance(item.MR, _quantity).ToString() + "%";
+			__instance.PR.text = "+" + Inventory_UpdateInvStats.CalcResistance(item.PR, _quantity).ToString() + "%";
+			__instance.VR.text = "+" + Inventory_UpdateInvStats.CalcResistance(item.VR, _quantity).ToString() + "%";
+			__instance.ER.text = "+" + Inventory_UpdateInvStats.CalcResistance(item.ER, _quantity).ToString() + "%";
 		}
 	}
 }

@@ -7,7 +7,7 @@ using static Arcanism.Patches.ItemExtensions;
 namespace Arcanism.Patches
 {
 
-	/* Moooore duplicated fucking bullshit. How many god damn item display slot classes are there with almost-identical-but-slightly-different property names!? */
+	/* Dealing w/ some duplicated item slot functionality */
 	[HarmonyPatch(typeof(SimSelectorSlot), nameof(SimSelectorSlot.LoadSelectorSlot))]
 	public class SimSelectorSlot_LoadSelectorSlot
 	{

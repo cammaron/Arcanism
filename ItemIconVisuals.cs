@@ -5,7 +5,7 @@ using static Arcanism.Patches.ItemExtensions;
 
 namespace Arcanism
 {
-    class ItemIconVisuals : MonoBehaviour
+    public class ItemIconVisuals : MonoBehaviour
     {
 
 
@@ -57,7 +57,7 @@ namespace Arcanism
         {
             if (qualityBackground == null)
             {
-                qualityBackground = new GameObject("QualityBG").AddComponent<Image>();// Instantiate(originalSparkler, transform.parent);
+                qualityBackground = new GameObject("QualityBG").AddComponent<Image>();
                 qualityBackground.transform.SetParent(transform.parent);
                 qualityBackground.transform.SetAsFirstSibling();
                 qualityBackground.transform.localPosition = Vector3.zero;

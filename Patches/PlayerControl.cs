@@ -8,33 +8,33 @@ using UnityEngine.EventSystems;
 
 namespace Arcanism.Patches
 {
-    /* Prevent masterwork items triggering the 'i can't take this item it's blessed' code on left click drop on NPC */
+    /**/
     [HarmonyPatch(typeof(PlayerControl), "LeftClick")]
     public class PlayerControl_LeftClick
     {
         
         static bool Prefix(PlayerControl __instance, ref OriginalItemMeta<Item> __state)
         {
-            var slot = GameData.MouseSlot;
-            var item = slot.MyItem;
-            if (item != null && item.IsUpgradeableEquipment())
-            {
-                __state = RevertQuantity(item, ref slot.Quantity);
-            }
-
             Ray ray = __instance.camera.ScreenPointToRay(Input.mousePosition);
             
-            // Overriding treasure chest spawn code to spawn predefined chest based on level of treasure map used
             RaycastHit raycastHit;
             if (Physics.Raycast(ray, out raycastHit))
             {
+                // Prevent masterwork items triggering the 'i can't take this item it's blessed' code on left click drop on NPC (ONLY for NPCs receiving quest items -- we still want to be able to give quality/blessed items to SimPlayers!)
+                if (raycastHit.transform.GetComponent<NPC>() != null && raycastHit.transform.GetComponent<SimPlayer>() == null)
+                {
+                    var slot = GameData.MouseSlot;
+                    var item = slot.MyItem;
+                    if (item != null && item.IsUpgradeableEquipment())
+                    {
+                        __state = RevertQuantity(item, ref slot.Quantity);
+                    }
+                }
+                
+                // Overriding treasure chest spawn code to spawn predefined chest based on level of treasure map used
                 if (raycastHit.transform.tag == "Treasure" && !EventSystem.current.IsPointerOverGameObject() && Vector3.Distance(__instance.transform.position, raycastHit.transform.position) < 5f)
                 {
-                    GameObject.Instantiate(SpellVessel_DoMiscSpells.TreasureHuntChest, raycastHit.transform.position, raycastHit.transform.rotation);
-                    GameObject.Instantiate(GameData.Misc.DigFX, raycastHit.transform.position, raycastHit.transform.rotation);
-                    GameData.PlayerAud.PlayOneShot(GameData.Misc.DigSFX, GameData.PlayerAud.volume * GameData.SFXVol);
-                    GameData.GM.GetComponent<TreasureHunting>().ResetTreasureHunt();
-                    raycastHit.transform.gameObject.SetActive(false);
+                    SpawnTreasureChest(raycastHit);
                     return false;
                 }
             }
@@ -57,6 +57,15 @@ namespace Arcanism.Patches
                         RestoreQuantity(__state, ref tradeSlot.Quantity);
                 }
             }
+        }
+
+        public static void SpawnTreasureChest(RaycastHit raycastHit)
+        {
+            GameObject.Instantiate(SpellVessel_DoMiscSpells.TreasureHuntChest, raycastHit.transform.position, raycastHit.transform.rotation);
+            GameObject.Instantiate(GameData.Misc.DigFX, raycastHit.transform.position, raycastHit.transform.rotation);
+            GameData.PlayerAud.PlayOneShot(GameData.Misc.DigSFX, GameData.PlayerAud.volume * GameData.SFXVol);
+            GameData.GM.GetComponent<TreasureHunting>().ResetTreasureHunt();
+            raycastHit.transform.gameObject.SetActive(false);
         }
     }
 }

@@ -211,13 +211,13 @@ namespace Arcanism.Patches
 					mod *= 1 - (.3f * modFactor); 
 					break;
 				case Quality.SUPERIOR:
-					mod *= 1 + (0.25f * modFactor);
+					mod *= 1 + (0.2f * modFactor);
 					break;
 				case Quality.MASTERWORK:
-					mod *= 1 + (0.5f * modFactor);
+					mod *= 1 + (0.4f * modFactor);
 					break;
 				case Quality.EXQUISITE:
-					mod *= 1 + (1.2f * modFactor);
+					mod *= 1 + (.8f * modFactor);
 					break;
 
 				case Quality.NORMAL:
@@ -247,7 +247,7 @@ namespace Arcanism.Patches
 					delta += 2f * deltaFactor;
 					break;
 				case Quality.EXQUISITE:
-					delta += 5f * deltaFactor;
+					delta += 3f * deltaFactor;
 					break;
 				default:
 					break;
@@ -255,16 +255,24 @@ namespace Arcanism.Patches
 
 			switch(GetBlessLevel(quantity))
             {
-				case Blessing.BLESSED:
-					delta += 2f * deltaFactor;
-					break;
+				case Blessing.BLESSED: // Blessed & Godly can both  be same. There's no chance of items dropping godly or appearing low level, so doesn't matter, and don't want to overpower shit any further.
 				case Blessing.GODLY:
-					delta += 4f * deltaFactor;
+					delta += 2f * deltaFactor;
 					break;
             }
 
 			return Mathf.Max(0, Mathf.FloorToInt(newStatValue + delta)); // floor is a deliberate choice so that junk items and early items are more noticeably impacted. e.g. for stat 4 w/ .7 junk multi = 2.8, now floored down to 2 instead of 3.
 		}
+
+		public static int CalcResistance(this Item i, int stat, int quality)
+        {
+			// In vanilla, blessing stat mod works the same for resists (+50% for bless, +100% for godly).
+			// Resists are now boosted by quality level too, though, so... to make up for them multiplying each other, the resistance boost from each has reduced mod factor.
+			// at .6f mod, a godly+exquisite item has resist factor 2.36x up from 2x in vanilla for godly, but obv harder to get
+			// a godly+masterwork has 1.98, pretty close to orig godly
+			// anything less and it's *worse* than vanilla. Which is fine!
+			return ApplyQualityAndBlessToStat(quality, stat, .6f, 0f);
+        }
     }
 
 	/* Blessings need to be updated to give more than just +1 damage to a weapon, because that's completely useless */
@@ -304,15 +312,15 @@ namespace Arcanism.Patches
 					if (res > 0) res -= 1;
 					break;
 				case ItemExtensions.Quality.SUPERIOR:
-					if (__instance.ItemLevel > 8) res += 1; // level restrictions on res are just so really early masterworks don't feel too overpowered since the res appearance is disproportionately good
+					//if (__instance.ItemLevel > 8) res += 1;
+					// Superior doesn't get a res boost.
 					break;
 				case ItemExtensions.Quality.MASTERWORK:
-					if (__instance.ItemLevel > 16) res += 2;
-					else res += 1;
+					if (__instance.ItemLevel >= 9) res += 1; // level restrictions on res are just so really early masterworks don't feel too overpowered since the res appearance is disproportionately good
 					break;
 				case ItemExtensions.Quality.EXQUISITE:
-					if (__instance.ItemLevel > 16) res += 4;
-					else res += 2;
+					if (__instance.ItemLevel >= 25) res += 2;
+					else res += 1;
 					break;
 			}
 			__result = res;

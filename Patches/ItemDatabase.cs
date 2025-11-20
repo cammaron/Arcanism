@@ -11,6 +11,7 @@ namespace Arcanism.Patches
         DEVOUT_MOCCASINS = 39403944,
         FLAMESOLES = 24495417,
         ELDERS_SLIPPERS = 12898230,
+        SHADOWSTEP_SHOES = 27008672,
         BRAXONIAN_ROYAL_SHOES = 12898230,
         PIOUS_SANDALS = 2562654,
 
@@ -63,9 +64,11 @@ namespace Arcanism.Patches
         BLESSED_BRAXONIAN_BRACELET = 14217632,
         PERFECT_LINKS = 1824224,
         WARDED_BRACE = 45884862,
+        BLIGHTED_SILK_WRAPS = 17677440,
         GARDENERS_WRIST_WRAP = 173442,
         BRACELET_OF_VESSEL = 46442784,
         RESONATING_BRACE = 12451740,
+        FUNGAL_WRAPPED_BRACER = 16581714,
 
         // Arm/shoulder
         DESERT_SILK_SLEEVES = 5557329,
@@ -245,8 +248,8 @@ namespace Arcanism.Patches
             itemsToAdd.Add(DroppedBy(NpcName.SEED_OF_BLIGHT, DropChance.GUARANTEE_ONE, CreateSkillBook(skillBookBase, ItemId.SIBLING_SYNERGY, SkillDB_Start.SIBLING_SYNGERY_SKILL_ID, 65000))); 
             itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(skillBookBase, ItemId.PARASITIC_TWIN, SkillDB_Start.PARASITIC_TWIN_SKILL_ID, 150000)));
             itemsToAdd.Add(DroppedBy(NpcName.EVADNE_THE_CORRUPTED, DropChance.UNCOMMON, CreateSkillBook(skillBookBase, ItemId.TIME_IS_POWER_3, SkillDB_Start.TIME_IS_POWER_3_SKILL_ID, 98000)));
-            itemsToAdd.Add(DroppedBy(NpcName.FENTON_THE_BLIGHTED, DropChance.RARE, CreateSkillBook(skillBookBase, ItemId.TWIN_SPELL_3, SkillDB_Start.TWIN_SPELL_MASTERY_2_SKILL_ID, 120000))); 
-            itemsToAdd.Add(DroppedBy(NpcName.ELWIO_THE_TRAITOR, DropChance.RARE, CreateSkillBook(skillBookBase, ItemId.PERFECT_RELEASE_2, SkillDB_Start.PERFECT_RELEASE_2_SKILL_ID, 150000)));
+            itemsToAdd.Add(DroppedBy(NpcName.FENTON_THE_BLIGHTED, DropChance.UNCOMMON, CreateSkillBook(skillBookBase, ItemId.TWIN_SPELL_3, SkillDB_Start.TWIN_SPELL_MASTERY_2_SKILL_ID, 120000))); 
+            itemsToAdd.Add(DroppedBy(NpcName.ELWIO_THE_TRAITOR, DropChance.UNCOMMON, CreateSkillBook(skillBookBase, ItemId.PERFECT_RELEASE_2, SkillDB_Start.PERFECT_RELEASE_2_SKILL_ID, 150000)));
 
             SoldBy(NpcName.CERBANTIAS_FLAMEWARD, __instance.GetItemByID(ItemId.MAGICAL_SKIN));
 
@@ -483,16 +486,18 @@ namespace Arcanism.Patches
             new EquipmentGenerator { Id = ItemId.BRAXONIAN_WRAP, HP = 70, Mana = 120, AC = 28, End = 4, Int = 15, Wis = 14, Cha = 9, Res = 2, Value = 2950, }.Generate(__instance);
             new EquipmentGenerator { Id = ItemId.PRESERVED_CLOTH_COAT, HP = 170, Mana = 110, AC = 36, End = 12, Int = 18, Wis = 18, Cha = 9, Res = 1, Value = 5500, }.Generate(__instance);
             new EquipmentGenerator { Id = ItemId.SIVAKAYAN_DRESSCOAT, HP = 200, Mana = 200, AC = 38, End = 6, Int = 23, Wis = 23, Cha = 15, Res = 2, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.BRAXONIAN_ROYAL_TUNIC, HP = 280, Mana = 370, AC = 40, End = 0, Int = 30, Wis = 29, Cha = 21, Res = 3, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.ELDOTHS_FINERY, HP = 650, Mana = 600, AC = 45, End = 10, Int = 45, Wis = 44, Cha = 27, Res = 5, }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.BRAXONIAN_ROYAL_TUNIC, HP = 350, Mana = 800, AC = 45, End = 5, Int = 30, Wis = 30, Cha = 30, Res = 5, }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.ELDOTHS_FINERY, HP = 650, Mana = 600, AC = 60, End = 15, Int = 36, Wis = 25, Cha = 36, Res = 4, }.Generate(__instance);
         }
 
         static void UpdateTheFeets(ItemDatabase __instance, List<Item> itemsToAdd)
         {
             new EquipmentGenerator { Id = ItemId.DEVOUT_MOCCASINS, HP = 15, Mana = 60, AC = 15, End = 5, Int = 8, Wis = 13, Cha = 2, Res = 1, Value = 1900, }.Generate(__instance);
             new EquipmentGenerator { Id = ItemId.FLAMESOLES, HP = 90, Mana = 120, AC = 23, End = 12, Int = 13, Wis = 15, Cha = 11, Res = 2, Value = 3000, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.ELDERS_SLIPPERS, HP = 125, Mana = 250, AC = 20, End = 5, Int = 18, Wis = 24, Cha = 8, Res = 2, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.BRAXONIAN_ROYAL_SHOES, HP = 135, Mana = 250, AC = 21, End = 5, Int = 23, Wis = 24, Cha = 15, Res = 2, Value = 15000, }.Generate(__instance);
+            var shadowSteps = new EquipmentGenerator { Id = ItemId.SHADOWSTEP_SHOES, HP = 170, Mana = 170, AC = 35, End = 8, Dex = 12, Agi = 12, Int = 20, Wis = 11, Cha = 16, Res = 2, }.Generate(__instance);
+            shadowSteps.WornEffect = GameData.SpellDatabase.GetSpellByID("108204"); // Adding flight of foot 1 becasue it makes sense!
+            new EquipmentGenerator { Id = ItemId.ELDERS_SLIPPERS, HP = 125, Mana = 400, AC = 12, End = 4, Int = 20, Wis = 27, Cha = 8, Res = 3, }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.BRAXONIAN_ROYAL_SHOES, HP = 135, Mana = 250, AC = 21, End = 5, Int = 23, Wis = 15, Cha = 25, Res = 2, Value = 15000, }.Generate(__instance);
             new EquipmentGenerator { Id = ItemId.PIOUS_SANDALS, HP = 150, Mana = 290, AC = 25, End = 8, Int = 25, Wis = 30, Cha = 22, Res = 3, Value = 20500, }.Generate(__instance);
         }
 
@@ -560,14 +565,16 @@ namespace Arcanism.Patches
             new EquipmentGenerator { Id = ItemId.IGNITING_BRACE, HP = 40, Mana = 40, AC = 5, Int = 18, Wis = 0, Cha = 0, Res = 0 }.Generate(__instance).WeaponProcChance = 10;
             new EquipmentGenerator { Id = ItemId.CHITIN_BRACER, HP = 65, Mana = 65, AC = 15, Int = 12, Wis = 14, Cha = 0, Res = 2 }.Generate(__instance);
             new EquipmentGenerator { Id = ItemId.MOONSTONE_BANGLE, HP = 0, Mana = 130, AC = 0, Int = 15, Wis = 15, Cha = 15, Res = 3 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.BLIGHTED_SILK_WRAPS, HP = 120, Mana = 120, End = 0, AC = 0, Agi = 15, Dex = 15, Int = 15, Wis = 15, Cha = 15, Res = 2 }.Generate(__instance);
             new EquipmentGenerator { Id = ItemId.ERODED_BANGLE }.Generate(__instance).WeaponProcChance = 6;
-            new EquipmentGenerator { Id = ItemId.BRAXONIAN_BRACELET, HP = 100, Mana = 100, AC = 22, End = 12, Int = 19, Wis = 20, Cha = 8, Res = 2 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.BLESSED_BRAXONIAN_BRACELET, HP = 200, Mana = 200, AC = 30, End = 14, Int = 24, Wis = 24, Cha = 11, Res = 3, Value = 11000 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.PERFECT_LINKS, HP = 80, Mana = 80, AC = 15, Int = 6, Wis = 12, Cha = 20, Res = 5 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.WARDED_BRACE, HP = 120, Mana = 180, AC = 5, Int = 15, Wis = 15, Cha = 5, Res = 2 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.GARDENERS_WRIST_WRAP, HP = 220 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.BRACELET_OF_VESSEL, HP = 30, Mana = 200, AC = 12, Int = 26, Wis = 0, Cha = 20, Res = 4 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.RESONATING_BRACE, HP = 0, Mana = 0, AC = 40, Int = 5, Wis = 8, Cha = 5, Res = 8 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.BRAXONIAN_BRACELET, HP = 100, Mana = 150, AC = 22, End = 12, Int = 19, Wis = 20, Cha = 8, Res = 2 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.BLESSED_BRAXONIAN_BRACELET, HP = 150, Mana = 200, AC = 30, End = 14, Int = 24, Wis = 24, Cha = 11, Res = 3, Value = 11000 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.PERFECT_LINKS, HP = 80, Mana = 200, AC = 15, Int = 6, Wis = 12, Cha = 26, Res = 5 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.WARDED_BRACE, HP = 500, Mana = 200, End = 15, AC = 70, Int = 11, Wis = 18, Cha = 5, Res = 3 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.GARDENERS_WRIST_WRAP, HP = 220, Mana = 400, Int = 15, Wis = 30, Cha = 7, Res = 1 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.BRACELET_OF_VESSEL, HP = 50, Mana = 300, AC = 12, Int = 26, Wis = 0, Cha = 20, Res = 4 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.RESONATING_BRACE, HP = 0, Mana = 300, AC = 40, Int = 5, Wis = 8, Cha = 5, Res = 8 }.Generate(__instance);
+            new EquipmentGenerator { Id = ItemId.FUNGAL_WRAPPED_BRACER, HP = 150, Mana = 150, AC = 40, Int = 8, Wis = 8, Cha = 2, Res = 8 }.Generate(__instance);
         }
 
         static void UpdateShoulderPieces(ItemDatabase __instance, List<Item> itemsToAdd)
@@ -672,12 +679,12 @@ namespace Arcanism.Patches
             new EquipmentGenerator
             {
                 Id = ItemId.CRYSTALLISED_TACTICS,
-                HP = 150,
-                Mana = 120,
-                AC = 20,
-                Int = 19,
-                Wis = 19,
-                Cha = 6,
+                HP = 70,
+                Mana = 70,
+                AC = 10,
+                Int = 13,
+                Wis = 13,
+                Cha = 7,
                 Res = 2,
                 Lore = "Carried by the warriors of Vitheo, its energies are said to give an edge in battle... But its glow is dull without the Celestial Spike by its side."
             }.Generate(__instance);
@@ -689,7 +696,7 @@ namespace Arcanism.Patches
             // So, I'm making it a rare drop from Celestial Matter instead, and if you're game enough to spend said flower thingies (forgotten hope? lost faith? strangled echidna? I don't remember) 
             // then you now at least have UNCOMMON chance from Stardust themselves. Probably in addition to the existing RARE chance so a very remote chance to get 2. Yay you!
             DroppedBy(NpcName.CELESTIAL_MATTER, DropChance.RARE, 
-                DroppedBy(NpcName.STARDUST, DropChance.UNCOMMON, new EquipmentGenerator { Id = ItemId.CELESTIAL_SPIKE, HP = 150, Mana = 150, AC = 22, End = 10, Int = 16, Wis = 5, Cha = 10, Res = 1,
+                DroppedBy(NpcName.STARDUST, DropChance.UNCOMMON, new EquipmentGenerator { Id = ItemId.CELESTIAL_SPIKE, HP = 150, Mana = 150, AC = 22, End = 10, Int = 14, Wis = 5, Cha = 10, Res = 1,
                 Lore = "This unique item's true power is only unlocked when equipped alongside other crystals or enchanted stones, when its celestial facets send powerful fractal ripples, intensifying their glow two-fold."
             }.Generate(__instance)));
 
@@ -724,12 +731,12 @@ namespace Arcanism.Patches
             new EquipmentGenerator
             {
                 Id = ItemId.RESONATING_CRYSTAL,
-                HP = 150,
-                Mana = 150,
-                AC = 12,
+                HP = 120,
+                Mana = 120,
+                AC = 0,
                 Int = 13,
                 Wis = 13,
-                Cha = 13,
+                Cha = 7,
                 Res = 3,
                 WandBoltSpeed = 3,
                 WandBoltColour = new Color32(252, 136, 255, 255),
@@ -788,10 +795,10 @@ namespace Arcanism.Patches
             new EquipmentGenerator
             {
                 Id = ItemId.GLOWING_BLUE_STONE,
-                HP = 450,
+                HP = 300,
                 Mana = 210,
-                AC = 35,
-                Int = 21,
+                AC = 80,
+                Int = 17,
                 Wis = 10,
                 Cha = 13,
                 Res = 5,

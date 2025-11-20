@@ -227,8 +227,19 @@ namespace Arcanism.Skills
                         int manaReductionAmount = Mathf.FloorToInt(drainProgress);
                         drainProgress -= manaReductionAmount;
                         caster.MyStats.ReduceMana(manaReductionAmount);
-                        
-                        if (caster.MyStats.CurrentMana <= Vessel.spell.ManaCost) // At least enough mana to finish casting the spell (which isn't deducted 'til execution time) must remain in the bank
+
+                        float remainingSpareMana = caster.MyStats.CurrentMana - Vessel.spell.ManaCost;
+                        if (remainingSpareMana < manaDrainPerSecond * 1f)
+                        {
+                            float colourChangesPerSecond = 4f;
+                            float timePerFullCycle = 1f / colourChangesPerSecond;
+                            float timePerColour = timePerFullCycle / 2f;
+                            GameData.CB.OCTxt.color = Time.realtimeSinceStartup % timePerFullCycle <= timePerColour ? Color.red : Color.white;
+                            GameData.CB.OCTxt.transform.gameObject.SetActive(true);
+                            GameData.CB.OCTxt.fontSize = 48;
+                        }
+
+                        if (remainingSpareMana <= 0) // At least enough mana to finish casting the spell (which isn't deducted 'til execution time) must remain in the bank
                         {
                             Backfire(Vessel.spell.ManaCost + overchantTotalManaDrain); // NB we use the same backfire damage even if we're actually in a BEYOND chant
                             damageMulti = 0f;

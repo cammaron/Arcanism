@@ -2,6 +2,7 @@
 using HarmonyLib;
 using System.Collections.Generic;
 using System.Reflection.Emit;
+using static BigDamage.Patches._Util;
 
 namespace Arcanism.Patches
 {
@@ -96,5 +97,53 @@ namespace Arcanism.Patches
         {
 			CheckSetBonus(__instance);
         }
-    }
+
+		public static int CalcResistance(int stat, int quality)
+		{
+			// In vanilla, blessing stat mod works the same for resists (+50% for bless, +100% for godly).
+			// Resists are now boosted by quality level too, though, so... to make up for them multiplying each other, the resistance boost from each has reduced mod factor.
+			// at .6f mod, a godly+exquisite item has resist factor 2.36x up from 2x in vanilla for godly, but obv harder to get
+			// a godly+masterwork has 1.98, pretty close to orig godly
+			// anything less and it's *worse* than vanilla. Which is fine!
+			return ItemExtensions.ApplyQualityAndBlessToStat(quality, stat, .6f, 0f);
+		}
+
+		/* Adding this transpiler so I can use a different call for calculating resistance, as I don't want item quality to boost it so much */
+		static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+		{
+			var matcher = new CodeMatcher(instructions);
+			
+			// For player
+			var playerItemLoader = LoadsField(AccessTools.Field(typeof(ItemIcon), nameof(ItemIcon.MyItem)));
+			ReplaceResistanceCalc(matcher, OpCodes.Ldloc_1, playerItemLoader, nameof(Item.MR), "Player");
+			ReplaceResistanceCalc(matcher, OpCodes.Ldloc_1, playerItemLoader, nameof(Item.ER), "Player");
+			ReplaceResistanceCalc(matcher, OpCodes.Ldloc_1, playerItemLoader, nameof(Item.PR), "Player");
+			ReplaceResistanceCalc(matcher, OpCodes.Ldloc_1, playerItemLoader, nameof(Item.VR), "Player");
+
+			// For sims
+			var simItemLoader = LoadsField(AccessTools.Field(typeof(SimInvSlot), nameof(SimInvSlot.MyItem)));
+			ReplaceResistanceCalc(matcher, OpCodes.Ldloc_3, simItemLoader, nameof(Item.MR), "Sim");
+			ReplaceResistanceCalc(matcher, OpCodes.Ldloc_3, simItemLoader, nameof(Item.ER), "Sim");
+			ReplaceResistanceCalc(matcher, OpCodes.Ldloc_3, simItemLoader, nameof(Item.PR), "Sim");
+			ReplaceResistanceCalc(matcher, OpCodes.Ldloc_3, simItemLoader, nameof(Item.VR), "Sim");
+			return matcher.Instructions();
+		}
+
+		static void ReplaceResistanceCalc(CodeMatcher matcher, OpCode loadOpCode, CodeMatch itemLoader, string statField, string who)
+        {
+			matcher
+				.MatchStartForward(
+					new CodeMatch(loadOpCode),
+					itemLoader,
+					new CodeMatch(loadOpCode),
+					itemLoader,
+					LoadsField(AccessTools.Field(typeof(Item), statField))
+				).ThrowIfInvalid($"Didn't find {statField} for {who}")
+				.RemoveInstructions(2) // now calling a static method instead of instance method, so removing the "item." bit of "item.Calc"
+				.MatchStartForward(new CodeMatch(OpCodes.Callvirt, AccessTools.Method(typeof(Item), nameof(Item.CalcStat))))
+				.ThrowIfInvalid($"Didn't find CalcStat after {statField} for {who}")
+				.RemoveInstruction()
+				.Insert(CodeInstruction.Call(() => CalcResistance(default, default)));
+		}
+	}
 }

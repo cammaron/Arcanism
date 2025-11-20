@@ -8,6 +8,8 @@ namespace Arcanism
 {
     public class LootHelper : MonoBehaviour
     {
+        public const float LUCK_OF_SOLUNA_BUFF_FACTOR = 2f;
+
         enum CorpseGlow
         {
             NONE = 0,
@@ -35,8 +37,12 @@ namespace Arcanism
         {
             if (!finished && (IsOpenChest() || npc == null || npc.GetChar().IsDead()))
             {
-                UpdateLootQuality();
-                CreateCorpseGlow();
+                bool isSim = (npc?.SimPlayer).GetValueOrDefault(false);
+                if (!isSim)
+                {
+                    UpdateLootQuality();
+                    CreateCorpseGlow();
+                }
                 finished = true;
             }
         }
@@ -57,6 +63,7 @@ namespace Arcanism
             {
                 if (ItemDatabase_Start.dropsByNpc.TryGetValue(npcName, out HashSet<(DropChance, Item)> drops))
                 {
+                    Main.Log.LogInfo($"{npc.NPCName} has custom drops to register.");
                     foreach (var drop in drops)
                     {
                         List<Item> relevantList = null;
@@ -80,7 +87,10 @@ namespace Arcanism
                         }
 
                         if (!relevantList.Contains(drop.Item2)) // I don't *think* NPCs get recycled from a pool at time of writing, but just in case, don't wanna be doubling up
+                        {
+                            Main.Log.LogInfo($"Adding item {drop.Item2.ItemName} to {drop.Item1} loot list");
                             relevantList.Add(drop.Item2);
+                        }
                     }
                 }
             }
@@ -256,6 +266,16 @@ namespace Arcanism
         {
             float percentChance = 1.5f * lootRate; // vanilla is 1%, but too rare imo
 
+            
+            return Random.Range(0f, 1f) * 100f <= percentChance;
+        }
+
+        protected Quality GenerateQualityLevel(float lootRate)
+        {
+            var roll = Random.Range(0f, 1f) * 100f;
+            roll /= lootRate;
+
+
             if (npc != null && npc.GetChar().MyStats != null)
             {
                 bool hurtByPlayer = npc.AggroTable != null && npc.AggroTable.Exists(aggro => aggro != null && aggro.Player != null && aggro.Player.transform.name == "Player");
@@ -274,18 +294,10 @@ namespace Arcanism
                     int maxEnemyLevelForSolunaBuff = luckOfSoluna.Effect.RequiredLevel - 1;
 
                     if (enemyLevel <= maxEnemyLevelForSolunaBuff)
-                        percentChance *= 3f;
+                        roll /= LUCK_OF_SOLUNA_BUFF_FACTOR;
                 }
             }
-            
-            return Random.Range(0f, 1f) * 100f <= percentChance;
-        }
 
-        protected Quality GenerateQualityLevel(float lootRate)
-        {
-            var roll = Random.Range(0f, 1f) * 100f;
-            roll /= lootRate;
-            
             if (roll <= .5f)
                 return Quality.EXQUISITE;
             else if (roll <= 3f)

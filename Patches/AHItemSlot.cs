@@ -22,17 +22,4 @@ namespace Arcanism.Patches
 				_greed *= expectedBaseItemValue / _item.ItemValue;
 		}
 	}
-
-	/* TEMPORARY: Randomly stuck some debug here to work out why there are NPEs happening sometimes when saving sims... may have been to do with old RECKS_RV items in sims that aren't in DB any more. */
-	[HarmonyPatch(typeof(SimPlayer), nameof(SimPlayer.SaveSim))]
-	public class SimPlayer_SaveSim
-	{
-		public static void Prefix(SimPlayer __instance)
-		{
-			Main.Log.LogInfo("Saving sim: " + __instance.name + " - " + __instance.GetThisNPC()?.NPCName);
-
-		}
-	}
-
-
 }

@@ -6,14 +6,11 @@ using HarmonyLib;
 using System.Collections.Generic;
 using System.Collections;
 using System.IO;
-using System;
-using System.Linq;
-using UnityEngine.SceneManagement;
 using Arcanism.Patches;
 using Arcanism.Skills;
 using BepInEx.Configuration;
 using UnityEngine.Networking;
-using BigDamage;
+using HarmonyLib.Tools;
 
 namespace Arcanism
 {
@@ -55,6 +52,14 @@ namespace Arcanism
             minPriceLevelExponent= Config.Bind("Auction House Changes", "minPriceLevelExponent", DEFAULT_MIN_PRICE_LEVEL_EXPONENT, $"This is an additional exponential modifier per item level to ensure prices scale up as they should. If the minPricePerItemLevel is 200, item level is 10, and minPriveLevelExponent is 1.1, the item's base price will effectively be 200 * 10 * 1.1 ^ 10 = 5187. Don't change this unless you understand the maths -- but it's fine to set to 1 if you don't want the prices jacked up! Arcanism's default is {DEFAULT_MIN_PRICE_LEVEL_EXPONENT}.");
 
             LoadFiles();
+
+#if DEBUG
+            HarmonyFileLog.FileWriterPath = "D:\\Games\\HarmonyLog.txt";
+            HarmonyFileLog.Enabled = true;
+#else
+            HarmonyFileLog.Enabled = false;
+#endif
+
             harmonyPatcher = new Harmony(PLUGIN_GUID);
             harmonyPatcher.PatchAll();
 
@@ -119,7 +124,7 @@ namespace Arcanism
 
         void DestroyAllOfType<T>() where T : UnityEngine.Object
         {
-            foreach (var obj in FindObjectsOfType<T>())
+            foreach (var obj in Resources.FindObjectsOfTypeAll<T>())
                 Destroy(obj);
         }
 
@@ -203,8 +208,6 @@ namespace Arcanism
 
     public static class Extensions
     {
-
-        
         public static float GetRelevantCooldown(this Hotkeys instance)
         {
             var coolMan = GameData.PlayerControl.Myself.GetComponent<CooldownManager>();

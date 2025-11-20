@@ -45,8 +45,9 @@ namespace Arcanism
                 character.MyFaction == Character.Faction.EvilGuard ||
                 character.MyFaction == Character.Faction.Undead ||
                 character.MyFaction == Character.Faction.OtherEvil;
+            bool isTheAbomination = npc.NPCName == "The Abomination";
 
-            if (isAdventurer || isBoss || hasDialogue || !isEnemy)
+            if (isAdventurer || isBoss || hasDialogue || !isEnemy || isTheAbomination)
                 Destroy(this); // easier to plop this logic in here so it destroys itself when non-viable 'cause there's more than 1 place I'll be checking+adding this component
         }
 
@@ -102,9 +103,10 @@ namespace Arcanism
             npc.NamePlateTxt.text = name;
         }
 
-        protected void UpdateSize(float scaleMod, float xpMod, float hpMod)
+        protected void UpdateSize(float scaleMod, float xpMod, float hpMod, float aggroMod)
         {
             transform.localScale = originalScale * scaleMod;
+            character.MyAggro.transform.localScale = (Vector3.one * character.AggroRange * aggroMod) / scaleMod;
             npc.GetChar().BossXp = xpMod;
 
             character.MyStats.BaseHP = Mathf.RoundToInt(originalBaseHp * hpMod);
@@ -117,26 +119,21 @@ namespace Arcanism
             state = State.SUPERMASSIVE;
 
             SetName("Supermassive", originalName);
-            UpdateSize(4f, 30f, 24f);
+            UpdateSize(4f, 30f, 24f, 1.7f);
         }
 
         public void BecomeGiant()
         {
             state = State.GIANT;
             SetName("Giant", originalName);
-            UpdateSize(1.7f, 8f, 6f);
+            UpdateSize(1.7f, 8f, 6f, 1.25f);
         }
 
         public void BecomeSmoll()
         {
             state = State.NORMAL;
             SetName(originalName);
-            UpdateSize(1f, 0f, 1f);
-        }
-
-        protected bool ShouldBecomeGiant()
-        {
-            return Random.Range(0f, 1f) * 100f < 1.5f;
+            UpdateSize(1f, 0f, 1f, 1f);
         }
 
         public State GetState()

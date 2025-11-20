@@ -18,44 +18,30 @@ namespace Arcanism.Patches
 	[HarmonyPatch(typeof(Stats), nameof(Stats.RemoveBreakableEffects))]
 	public class Stats_RemoveBreakableEffects
 	{
-		static bool DoesDamageInterruptStatusEffect(StatusEffect effect)
-        {
-			int interruptChance = 20;
-			if (effect.Effect.Id == SpellDB_Start.COMA_SPELL_ID) interruptChance = 10;
-			return (Random.Range(0, 100) < interruptChance);
-
-		}
-		/* This patch is just about making Coma a more effective spell, so that its sleep effect can still be interrupted by damage but is less likely to be than a standard "unstable duration" effect. */
-		static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+		public static void Postfix(Stats __instance)
 		{
+			for(var i = 0; i < __instance.StatusEffects.Length; i ++)
+            {
+				var se = __instance.StatusEffects[i];
+				if (se == null || se.Effect == null) continue;
 
-			/*ldc.i4.0
-			ldc.i4.s  10
-			call int32[UnityEngine.CoreModule]UnityEngine.Random::Range(int32, int32)*/
+				int interruptChance = 0;
+				if (se.Effect.Id == SpellDB_Start.SHORT_STUN_SPELL_ID) // both of these spells are set to NOT break on damage or have unstable duration, so that I can totally override them here
+					interruptChance = 9;
+				else if (se.Effect.Id == SpellDB_Start.COMA_SPELL_ID)
+					interruptChance = 3;
 
-			var matcher = new CodeMatcher(instructions)
-				.MatchStartForward(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Random), nameof(Random.Range), new System.Type[] { typeof(int), typeof(int) }))) // Random.Range(0, 10) < 2
-				.Advance(2); // should put us on the boolean operand
-			var randomGreaterEqual = matcher.Instruction;
-			if (randomGreaterEqual == null)
-				throw new System.InvalidProgramException("Unable to locate the Random.Range call to interrupt breakable status efffects -- expected a bge opcode 2 lines after Random.Range but result is null.");
-			if (randomGreaterEqual.opcode != OpCodes.Bge && randomGreaterEqual.opcode != OpCodes.Bge_S)
-				throw new System.InvalidProgramException("Unable to locate the Random.Range call to interrupt breakable status efffects -- expected a bge opcode 2 lines after Random.Range but result got " + randomGreaterEqual.opcode + "  " + randomGreaterEqual.operand);
-
-			var goToOnFalse = randomGreaterEqual.operand;
-			
-			return matcher
-				.Advance(-4) // Go to the beginning of the block and remove the whole thing: 2 arg declarations for Random.Range, the call, the comparison value and the boolean op...
-				.RemoveInstructions(5) 
-				// Now, replace with my own condition block, calling a method defined above and checking if it's true.
-				.InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_0))
-				.InsertAndAdvance(new CodeInstruction(OpCodes.Call, AccessTools.PropertyGetter(typeof(Stats), "StatusEffects")))
-				.InsertAndAdvance(new CodeInstruction(OpCodes.Ldloc_0))
-				.InsertAndAdvance(new CodeInstruction(OpCodes.Ldelem_Ref)) 
-				.InsertAndAdvance(CodeInstruction.Call(() => DoesDamageInterruptStatusEffect(default)))
-				//.Insert(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(StatsRemoveBreakableEffectsPatch), nameof(DoesDamageInterruptStatusEffect))))
-				.InsertAndAdvance(new CodeInstruction(OpCodes.Brfalse, goToOnFalse))
-				.Instructions();
+				if (interruptChance > 0)
+                {
+					int roll = Random.Range(0, 100);
+					
+					if (roll < interruptChance)
+                    {
+						__instance.RemoveStatusEffect(i);
+						UpdateSocialLog.CombatLogAdd(__instance.transform.name + " has regained consciousness!");
+					}
+				}
+            }
 		}
 	}
 
@@ -65,10 +51,10 @@ namespace Arcanism.Patches
 	{
 		public const float RECENT_DAMAGE_HACK = 0.1f; // medMsg gets reset to false if RecentDamage is 0, so in order to keep hiding that meditative state msg, never letting it go below 0.1 (and treating 0.1 as 0 in my regen code)
 		public static void Prefix(ref bool ___medMsg, ref float ___RecentDmg)
-        {
+		{
 			___RecentDmg = RECENT_DAMAGE_HACK;
 			___medMsg = true;  // to prevent meditative state msg ever showing as I'm controlling this logic myself now
-        }
+		}
 	}
 
 	/* Arcanism has a heavy focus on an altered mana economy. The aim is to greatly slow down the amplified regen between fights, leaving it still useful but not near-instantaneous. 

@@ -136,8 +136,8 @@ namespace Arcanism.Patches
 			var baseAsc = __instance.GetAscensionByID(COOLDOWN_REDUCTION_ASCENSION_ID);
 
 			List<Ascension> toAdd = new List<Ascension>();
-			toAdd.Add(CreateAscension(baseAsc, MIND_SPLIT_ASCENSION_ID, "Mind Split", $"Currenlt unimplemented.", 3));
-			toAdd.Add(CreateAscension(baseAsc, REFRACTION_ASCENSION_ID, "Refraction", $"Infused with your own magic, your supernatural vigour reduces the recovery period before you can use Control Chant, Twin Spell and Perfect Release by {REFRACTION_COOLDOWN_FACTOR * 100}% per level.", 5));
+			toAdd.Add(CreateAscension(baseAsc, MIND_SPLIT_ASCENSION_ID, "Mind Split", $"Currently unimplemented.", 3));
+			toAdd.Add(CreateAscension(baseAsc, REFRACTION_ASCENSION_ID, "Refraction", $"<size=14>Infused with your own magic, your supernatural vigour reduces the recovery period before you can use Control Chant, Twin Spell and Perfect Release by {REFRACTION_COOLDOWN_FACTOR * 100}% per level.</size>", 5));
 
 			foreach (var asc in toAdd)
 			{

@@ -126,29 +126,30 @@ namespace Arcanism.Patches
 			WithScreenshake(UpdateTargetSpell(__instance, "63468487", 300, 1550, 7.5f, 24f)); // Winter's Bite 
 			UpdateTargetSpell(__instance, "5069675", 180, 360, 0.5f, 2); // Ice Shock 
 			WithScreenshake(UpdateTargetSpell(__instance, "4343577", 600, 1920, 5f, 12)); // Ice Spear 
-			UpdateTargetSpell(__instance, BRAXS_FURY_SPELL_ID, 900, 1300, 1, 3); // Brax's Fury 
+			UpdateTargetSpell(__instance, BRAXS_FURY_SPELL_ID, 600, 1300, 1f, 1.5f); // Brax's Fury 
 			WithScreenshake(UpdateTargetSpell(__instance, "51152210", 1400, 2880, 3f, 7, null, 1600), 0.6f, 0.2f); // Aetherstorm -- passing incorrect description param
 			WithScreenshake(UpdateTargetSpell(__instance, "48295394", 2000, 6000, 8.5f, 36), 1.75f, 0.35f); // Tenebris 
 
 			UpdateTargetSpell(__instance, "57673295", 360, 1400, 1, 3); // Mithril Shards -- only used on weapons
 
-			UpdateShieldSpell(__instance, HARDENED_SKIN_SPELL_ID, 80, 650, 0.5f, 300, 8); // Hardened Skin
-			UpdateShieldSpell(__instance, "9867251", 600, 4000, 0.5f, 300, 13); // Magical Skin
-			UpdateShieldSpell(__instance, "5379426", 1400, 12000, 0.5f, 300, 18); // Magical Skin II
+			UpdateShieldSpell(__instance, HARDENED_SKIN_SPELL_ID, 70, 800, 0.5f, 90, 4); // Hardened Skin
+			UpdateShieldSpell(__instance, "9867251", 350, 5000, 0.5f, 90, 6); // Magical Skin
+			var magicalSkin2 = UpdateShieldSpell(__instance, "5379426", 550, 20000, 0.5f, 90, 9); // Magical Skin II
+			magicalSkin2.SpellDesc = $"Conjure a powerful, longer-lasting barrier capable of absorbing {magicalSkin2.ShieldingAmt} damage.";
 
 			// Sleep
 			UpdateTargetSpell(__instance, "61166248", 160, 0, 2.5f, 4, 27f); // Sleep
-			var coma = UpdateTargetSpell(__instance, COMA_SPELL_ID, 500, 0, 1f, 60, 10); // Coma
-			coma.UnstableDuration = true;
-			coma.BreakOnDamage = false;
+			var coma = UpdateTargetSpell(__instance, COMA_SPELL_ID, 500, 0, 3f, 60, 25); // Coma
+			coma.UnstableDuration = coma.BreakOnDamage = coma.BreakOnAnyAction = false; // see shortStun comment below
 			coma.SpellDesc = "Send your target into a short but intense coma, from which they will have trouble waking even if hurt";
 
 			// Quick stuns
 			Spell baseStun = __instance.GetSpellByID("9692298");
 			Spell shortStun = GameObject.Instantiate(baseStun);
 			shortStun.Id = SHORT_STUN_SPELL_ID;
-			shortStun.SpellDurationInTicks = 1; // Actually wanted 1.5 seconds, but without very hacky mods to the tick system... this will have to do for now. NB there *is* a short stun effect with 1 tick duration already in the spell DB but it isn't unstable, and this must be.
-			
+			shortStun.SpellDurationInTicks = 1;
+			shortStun.UnstableDuration = shortStun.BreakOnDamage = shortStun.BreakOnAnyAction = false; // going to give this and Coma their own conditions for breaking so they don't have to have unstable duration. See Stats_RemoveBreakableEffects 
+
 			spellsToAdd.Add(shortStun);
 			UpdateTargetSpell(__instance, JOLT_SPELL_ID, 200, 200, 0.5f, 1).StatusEffectToApply = shortStun; // Jolt --  much shorter stun duration, but can be cast repeatedly
 			UpdateTargetSpell(__instance, "16834290", 350, 500, 0.5f, 1).StatusEffectToApply = shortStun; // Concuss
@@ -171,8 +172,8 @@ namespace Arcanism.Patches
 			funeralPyre.ChargeSound = weightOfSea.ChargeSound;
 			funeralPyre.CompleteSound = weightOfSea.CompleteSound;
 			funeralPyre.color = new Color32(137, 16, 130, 255);
-			UpdateTargetSpell(__instance, INFERNIS_SPELL_ID, 800, 1250, 1f, 2.5f, 30).Line = Spell.SpellLine.Arc_Element_DOT; // Infernis
-			UpdateTargetSpell(__instance, "10644536", 0, 1800, 0, 0, 18); // Linfering Inferno
+			UpdateTargetSpell(__instance, INFERNIS_SPELL_ID, 600, 850, 1f, 1f, 30).Line = Spell.SpellLine.Arc_Element_DOT; // Infernis
+			UpdateTargetSpell(__instance, "10644536", 0, 1700, 0, 0, 12); // Linfering Inferno
 
 			var parasiticTwin = GameObject.Instantiate(funeralPyre); // Basically just copy Funeral Pyre since they're both void DoTs
 			parasiticTwin.Id = PARASITIC_TWIN_SPELL_ID;
@@ -236,7 +237,7 @@ namespace Arcanism.Patches
 			manaCharge1.Mana = 14;
 
 			var manaCharge2 = __instance.GetSpellByID("913744");
-			manaCharge2.Mana = 40;
+			manaCharge2.Mana = 70;
 
 			var auraOfBrax1 = __instance.GetSpellByID("29302546");
 			auraOfBrax1.Mana = 2;
@@ -254,6 +255,9 @@ namespace Arcanism.Patches
 			auraOfBrax5.Mana = 50;
 			auraOfBrax5.Int = 35;
 			auraOfBrax5.Cha = 35;
+
+			var sageAura = __instance.GetSpellByID("73732530"); // from Sage's Trinket, vanilla *200* regen for whole party
+			sageAura.Mana = 75;
 
 			spellsToAdd.Add(CreateLuckOfSolunaEffect(LUCK_OF_SOLUNA_1_SPELL_ID, 12, "I", nourished.ChargeSound, nourished.CompleteSound));
 			spellsToAdd.Add(CreateLuckOfSolunaEffect(LUCK_OF_SOLUNA_2_SPELL_ID, 18, "II", nourished.ChargeSound, nourished.CompleteSound));
@@ -282,7 +286,7 @@ namespace Arcanism.Patches
 			luckOfSoluna.StatusEffectMessageOnNPC = "glows with the light of Soluna.";
 			luckOfSoluna.StatusEffectMessageOnPlayer = "glow with the light of Soluna.";
 			string levelLimitStr = spellLevel > 35 ? "of any Level" : $"below Level {spellLevel}";
-			luckOfSoluna.SpellDesc = $"Triples the chance for items dropped by enemies {levelLimitStr} to be Blessed.";
+			luckOfSoluna.SpellDesc = $"Increase quality of items dropped from enemies and treasure chests {levelLimitStr} by {Mathf.RoundToInt((LootHelper.LUCK_OF_SOLUNA_BUFF_FACTOR - 1f) * 100f)}%";
 			luckOfSoluna.ChargeSound = chargeSound;
 			luckOfSoluna.CompleteSound = completeSound;
 			luckOfSoluna.SpellIcon = Main.miscSpritesByName["LuckOfSoluna"];
