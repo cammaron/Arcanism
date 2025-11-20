@@ -86,9 +86,12 @@ namespace Arcanism
                                 break;
                         }
 
-                        if (!relevantList.Contains(drop.Item2)) // I don't *think* NPCs get recycled from a pool at time of writing, but just in case, don't wanna be doubling up
+                        if (!relevantList.Contains(drop.Item2)) 
                         {
                             Main.Log.LogInfo($"Adding item {drop.Item2.ItemName} to {drop.Item1} loot list");
+                            if (drop.Item1 == DropChance.UNCOMMON || drop.Item1 == DropChance.RARE)
+                                lootTable.MaxNonCommonDrops += 1;
+                            lootTable.MaxNumberDrops += 1;
                             relevantList.Add(drop.Item2);
                         }
                     }
