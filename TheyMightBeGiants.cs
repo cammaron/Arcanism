@@ -45,9 +45,11 @@ namespace Arcanism
                 character.MyFaction == Character.Faction.EvilGuard ||
                 character.MyFaction == Character.Faction.Undead ||
                 character.MyFaction == Character.Faction.OtherEvil;
-            bool isTheAbomination = npc.NPCName == "The Abomination";
+            bool isOtherEnemyThatShouldntBeBig =
+                npc.NPCName == "The Abomination" ||
+                npc.NPCName == "Hand of the King";
 
-            if (isAdventurer || isBoss || hasDialogue || !isEnemy || isTheAbomination)
+            if (isAdventurer || isBoss || hasDialogue || !isEnemy || isOtherEnemyThatShouldntBeBig)
                 Destroy(this); // easier to plop this logic in here so it destroys itself when non-viable 'cause there's more than 1 place I'll be checking+adding this component
         }
 
@@ -119,7 +121,7 @@ namespace Arcanism
             state = State.SUPERMASSIVE;
 
             SetName("Supermassive", originalName);
-            UpdateSize(4f, 30f, 24f, 1.7f);
+            UpdateSize(2.6f, 30f, 24f, 1.7f);
         }
 
         public void BecomeGiant()
