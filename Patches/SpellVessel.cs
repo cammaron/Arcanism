@@ -1,12 +1,11 @@
 ﻿using UnityEngine;
-using UnityEngine.UI;
 using HarmonyLib;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection.Emit;
 using Arcanism.SkillExtension;
 using UnityEngine.SceneManagement;
 using Arcanism.CharacterUI;
+using static BigDamage.Patches._Util;
 
 namespace Arcanism.Patches
 {
@@ -23,16 +22,16 @@ namespace Arcanism.Patches
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
-            var calcCharismaModCall = CodeInstruction.Call(typeof(SpellVessel), nameof(SpellVessel.CalculateCharismaModifier), new System.Type[] { typeof(int), typeof(int) });
+            var calcCharismaModCall = Calls(() => default(SpellVessel).CalculateCharismaModifier(default, default));
             return new CodeMatcher(instructions)
                 .MatchStartForward(calcCharismaModCall)
                 .MatchStartBackwards(
-                    new CodeInstruction(OpCodes.Ldarg_0),
-                    new CodeInstruction(OpCodes.Ldarg_0),
-                    CodeInstruction.LoadField(typeof(SpellVessel), "SpellSource"),
-                    CodeInstruction.LoadField(typeof(CastSpell), nameof(CastSpell.MyChar)),
-                    CodeInstruction.LoadField(typeof(Character), nameof(Character.MyStats)),
-                    CodeInstruction.LoadField(typeof(Stats), nameof(Stats.Level))
+                    new CodeMatch(OpCodes.Ldarg_0),
+                    new CodeMatch(OpCodes.Ldarg_0),
+                    LoadsField(AccessTools.Field(typeof(SpellVessel), "SpellSource")),
+                    LoadsField(AccessTools.Field(typeof(CastSpell), nameof(CastSpell.MyChar))),
+                    LoadsField(AccessTools.Field(typeof(Character), nameof(Character.MyStats))),
+                    LoadsField(AccessTools.Field(typeof(Stats), nameof(Stats.Level)))
                 )
                 .RemoveInstruction() // only need *one* of those "this" references now that we're calling a non-local calc method
                 .Advance(2) // to the MyChar line, from which point we'll start removing stuff -- wanna keep the SpellSource field to pass it as an argument to our own method
@@ -44,7 +43,7 @@ namespace Arcanism.Patches
 
     /* Replaces the call that calculates bonus damage for spell DoTs -- it was entirely additive and inconsistent with the other new damage formula */
     [HarmonyPatch(typeof(SpellVessel), "ResolveSpell")]
-    class SpellVessel_ResolveSpell
+    public class SpellVessel_ResolveSpell
     {
         static int CalculateDamageOverTimeDamageBonus(CastSpell source, SpellVessel vessel)
         {
@@ -75,7 +74,7 @@ namespace Arcanism.Patches
             // of things like spell procs from weapons -- they occur on their own vessel instance.
             // Thus, before proceeding with any skill extension logic, check if it's the real vessel and not a proc, and if it is, just let it carry on as normal.
             SpellVessel casterMainVessel = Traverse.Create(___SpellSource).Field<SpellVessel>("CurrentVessel").Value;
-            if (__instance.isProc || __instance != casterMainVessel) return true; 
+            if (__instance.isProc || __instance != casterMainVessel) return true;
 
             var damageModifier = ___SpellSource.MyChar.GetComponent<ISpellDamageModifier>();
             if (damageModifier != null)
@@ -191,6 +190,7 @@ namespace Arcanism.Patches
                 if (nextTarget != null) /* If an IRetargetingSkill was used and there are still more targets, cancel EndSpell, update target, resolve again 'til no targets left */
                 {
                     ___targ = nextTarget.MyStats;
+                    __instance.UseMana = false;
                     __instance.ResolveEarly();
                     return false;
                 }
