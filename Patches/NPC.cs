@@ -71,7 +71,7 @@ namespace Arcanism.Patches
                 shop.ItemsForSale.Remove(GameData.ItemDB.GetItemByID(ItemId.SPIDERSILK_SHIRT)); // this is replaced by Novice Robe
             }
 
-            if (ItemDatabase_Start.itemsSoldByVendor.TryGetValue(npcName, out HashSet<Item> itemsForSale)) {
+            if (ItemDatabase_Start.itemsSoldByVendor.TryGetValue(npcName, out var itemIdsForSale)) {
                 __instance.GetComponent<Character>().isVendor = true;
                 var shop = __instance.GetComponent<VendorInventory>();
                 if (shop == null)
@@ -85,11 +85,13 @@ namespace Arcanism.Patches
                 int emptiesRemoved = shop.ItemsForSale.RemoveAll(i => i == GameData.PlayerInv.Empty);
                 if (emptiesRemoved > 0) Main.Log.LogInfo("Removed " + emptiesRemoved + " empty item slots from " + __instance.NPCName + "'s shop.");
 
-                foreach (var item in itemsForSale)
+                foreach (var itemId in itemIdsForSale)
                 {
-                    if (!shop.ItemsForSale.Contains(item))  // don't think NPCs are recycled atm but just in case they are in future, don't want to double up items
+                    if (!shop.ItemsForSale.Exists(i => i.Id == itemId.Id()))  // don't think NPCs are recycled atm but just in case they are in future, don't want to double up items
                     {
+                        var item = GameData.ItemDB.GetItemByID(itemId);
                         shop.ItemsForSale.Add(item);
+                        Main.Log.LogInfo($"Added {item.ItemName} to {__instance.NPCName}'s shop.");
                     }
                 }
             }

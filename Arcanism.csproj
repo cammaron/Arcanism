@@ -486,7 +486,7 @@
     <Compile Include="CharacterUI\LevelDisplay.cs" />
     <Compile Include="CharacterUI\HealthBar.cs" />
     <Compile Include="CharacterUI\TargetIndicator.cs" />
-    <Compile Include="EquipmentGenerator.cs" />
+    <Compile Include="ItemGenerator.cs" />
     <Compile Include="ItemIconVisuals.cs" />
     <Compile Include="Patches\AHItemSlot.cs" />
     <Compile Include="Patches\AuctionHouseUI.cs" />

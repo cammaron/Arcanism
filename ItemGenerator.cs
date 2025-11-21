@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Arcanism
 {
-    public class EquipmentGenerator
+    public class ItemGenerator
     {
         public ItemId? CreateFromBaseId;
         public ItemId Id;
@@ -62,7 +62,9 @@ namespace Arcanism
 
         public float? SpellCastSeconds;
 
-        public EquipmentGenerator TuneWand(int damage, float attackDelay, int range, string spellId = null, float procChance = 0) // juuuust an extra lil helper to make doing another pass over all the wands less annoying
+        public Skill TeachSkill;
+
+        public ItemGenerator TuneWand(int damage, float attackDelay, int range, string spellId = null, float procChance = 0) // juuuust an extra lil helper to make doing another pass over all the wands less annoying
         {
             this.Damage = damage;
             this.IsWand = true;
@@ -70,6 +72,54 @@ namespace Arcanism
             this.AttackDelay = attackDelay;
             if (spellId != null) WandEffect = GameData.SpellDatabase.GetSpellByID(spellId);
             if (procChance > 0) WandProcChance = procChance;
+            return this;
+        }
+
+        public ItemGenerator NewSkillBook(ItemId id, string skillId, int value)
+        {
+            this.Id = id;
+            this.CreateFromBaseId = ItemId.ARCANE_RECOVERY;
+            this.TeachSkill = GameData.SkillDatabase.GetSkillByID(skillId);
+            this.Name = $"Skill Book: {this.TeachSkill.SkillName}";
+            this.Level = this.TeachSkill.ArcanistRequiredLevel;
+            this.Value = value;
+            return this;
+        }
+
+        public ItemGenerator NewEffectScroll(ItemId id, string spellId, int value)
+        {
+            this.Id = id;
+            this.CreateFromBaseId = ItemId.BREAD;
+            this.ClickEffect = GameData.SpellDatabase.GetSpellByID(spellId);
+            this.Name = $"Scroll of {this.ClickEffect.SpellName}";
+            this.Value = value;
+            this.Lore = this.ClickEffect.SpellDesc;
+            return this;
+        }
+
+        public ItemGenerator SoldBy(NpcName npcName)
+        {
+            if (!ItemDatabase_Start.itemsSoldByVendor.TryGetValue(npcName, out HashSet<ItemId> set))
+            {
+                set = new HashSet<ItemId>();
+                ItemDatabase_Start.itemsSoldByVendor.Add(npcName, set);
+            }
+
+            set.Add(this.Id);
+
+            return this;
+        }
+
+        public ItemGenerator DroppedBy(NpcName npcName, DropChance dropChance)
+        {
+            if (!ItemDatabase_Start.dropsByNpc.TryGetValue(npcName, out Dictionary<ItemId, DropChance> chanceByItemId))
+            {
+                chanceByItemId = new Dictionary<ItemId, DropChance>();
+                ItemDatabase_Start.dropsByNpc.Add(npcName, chanceByItemId);
+            }
+
+            chanceByItemId[this.Id] = dropChance;
+
             return this;
         }
 
@@ -185,6 +235,8 @@ namespace Arcanism
             }
 
             if (SpellCastSeconds.HasValue) item.SpellCastTime = SpellCastSeconds.Value * 60f;
+
+            if (this.TeachSkill != null) item.TeachSkill = this.TeachSkill;
 
             if (CreateFromBaseId.HasValue)
                 Main.Log.LogInfo($"Item created: {Name}");

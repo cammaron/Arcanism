@@ -61,13 +61,28 @@ namespace Arcanism
             var nameToEnum = npc.NPCName.ToUpper().Replace(' ', '_');
             if (System.Enum.TryParse(nameToEnum, out NpcName npcName))
             {
-                if (ItemDatabase_Start.dropsByNpc.TryGetValue(npcName, out HashSet<(DropChance, Item)> drops))
+                if (ItemDatabase_Start.dropsByNpc.TryGetValue(npcName, out var itemByDropChance))
                 {
-                    Main.Log.LogInfo($"{npc.NPCName} has custom drops to register.");
-                    foreach (var drop in drops)
+                    Main.Log.LogInfo($"{npc.NPCName} has custom drops to register. Max item drops is {lootTable.MaxNumberDrops} and max uncommon drops is {lootTable.MaxNonCommonDrops}");
+                    var existingDropsById = new Dictionary<string, Item>();
+                    lootTable.CommonDrop.ForEach(item => existingDropsById[item.Id] = item);
+                    lootTable.UncommonDrop.ForEach(item => existingDropsById[item.Id] = item);
+                    lootTable.RareDrop.ForEach(item => existingDropsById[item.Id] = item);
+                    lootTable.LegendaryDrop.ForEach(item => existingDropsById[item.Id] = item);
+                    lootTable.GuaranteeOneDrop.ForEach(item => existingDropsById[item.Id] = item);
+
+                    foreach (var entry in itemByDropChance)
                     {
+                        if (existingDropsById.TryGetValue(entry.Key.Id(), out var existingDrop))
+                        {
+                            Main.Log.LogInfo($"{existingDrop.ItemName} already present in other drop lists; not adding to {entry.Value} list");
+                            continue;
+                        }
+
+                        var item = GameData.ItemDB.GetItemByID(entry.Key);
+                        
                         List<Item> relevantList = null;
-                        switch (drop.Item1)
+                        switch (entry.Value)
                         {
                             case DropChance.COMMON:
                                 relevantList = lootTable.CommonDrop;
@@ -86,14 +101,17 @@ namespace Arcanism
                                 break;
                         }
 
-                        if (!relevantList.Contains(drop.Item2)) 
-                        {
-                            Main.Log.LogInfo($"Adding item {drop.Item2.ItemName} to {drop.Item1} loot list");
-                            if (drop.Item1 == DropChance.UNCOMMON || drop.Item1 == DropChance.RARE)
-                                lootTable.MaxNonCommonDrops += 1;
-                            lootTable.MaxNumberDrops += 1;
-                            relevantList.Add(drop.Item2);
-                        }
+                        
+                        // Don't want NPCs *unable to drop the thing* because of this limiter being 0 in vanilla. Lookin' at you, Elwio.
+                        if (lootTable.MaxNonCommonDrops == 0 & (entry.Value == DropChance.UNCOMMON || entry.Value == DropChance.RARE))
+                            lootTable.MaxNonCommonDrops += 1;
+
+                        if (lootTable.MaxNumberDrops < lootTable.MaxNonCommonDrops - 1) // because MaxNumberDrops is zero based and MAxNonCommonDrops is not. :S
+                            lootTable.MaxNumberDrops = lootTable.MaxNonCommonDrops - 1;
+
+                        relevantList.Add(item);
+
+                        Main.Log.LogInfo($"Added item {item.ItemName} to {entry.Value} loot list which now contains {relevantList.Count} items, meaning *IF* a drop comes from this loot list, it will have a {(1f / relevantList.Count) * 100f}% chance of being this item.");
                     }
                 }
             }

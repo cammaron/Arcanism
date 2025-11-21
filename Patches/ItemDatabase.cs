@@ -145,7 +145,7 @@ namespace Arcanism.Patches
         EXPERT_CONTROL = 90000000,
         EXPERT_CONTROL_2 = 90000001,
         TWIN_SPELL = 90000002,
-        TWIN_SPELL_2 = 90000003,
+        TWIN_SPELL_MASTERY = 90000003,
 
         TRICKSTERS_PANTS = 90000004,
         TATTERED_WRAP = 90000005,
@@ -153,7 +153,7 @@ namespace Arcanism.Patches
 
         NOVICE_ROBE = 90000007,
 
-        TWIN_SPELL_3 = 90000008,
+        TWIN_SPELL_MASTERY_2 = 90000008,
         VANISHING_TWIN = 90000009,
         PARASITIC_TWIN = 90000010,
         SIBLING_SYNERGY = 90000011,
@@ -197,8 +197,8 @@ namespace Arcanism.Patches
     [HarmonyPatch(typeof(ItemDatabase), "Start")]
     public class ItemDatabase_Start
     {
-        public static Dictionary<NpcName, HashSet<Item>> itemsSoldByVendor = new Dictionary<NpcName, HashSet<Item>>();
-        public static Dictionary<NpcName, HashSet<(DropChance, Item)>> dropsByNpc = new Dictionary<NpcName, HashSet<(DropChance, Item)>>();
+        public static Dictionary<NpcName, HashSet<ItemId>> itemsSoldByVendor = new Dictionary<NpcName, HashSet<ItemId>>();
+        public static Dictionary<NpcName, Dictionary<ItemId, DropChance>> dropsByNpc = new Dictionary<NpcName, Dictionary<ItemId, DropChance>>();
         // A map to look up the available set bonuses for an item, by ID. The set bonuses themselves are another map with the ID for the other item that must be equipped,
         // and the value -- an Item itself -- is merely a shell for carrying stats, not needing to be a real Item record
         public static Dictionary<ItemId, Dictionary<ItemId, Item>> setBonusesByItemId = new Dictionary<ItemId, Dictionary<ItemId, Item>>();
@@ -232,26 +232,49 @@ namespace Arcanism.Patches
 
             var skillBookBase = __instance.GetItemByID(ItemId.ARCANE_RECOVERY);
 
-            itemsToAdd.Add(
-                DroppedBy(NpcName.ZASHLYN_BLOODBANE, DropChance.UNCOMMON,
-                DroppedBy(NpcName.MOURNING, DropChance.UNCOMMON, 
-                SoldBy(NpcName.NYLITH_VALORRI, 
-                CreateSkillBook(skillBookBase, ItemId.TIME_IS_POWER, SkillDB_Start.TIME_IS_POWER_SKILL_ID, 700))
-                )));
-            itemsToAdd.Add(SoldBy(NpcName.RORELI_GILMARE, CreateSkillBook(skillBookBase, ItemId.EXPERT_CONTROL, SkillDB_Start.EXPERT_CONTROL_SKILL_ID, 9500)));
-            itemsToAdd.Add(SoldBy(NpcName.EDWIN_ANSEGG, CreateSkillBook(skillBookBase, ItemId.TWIN_SPELL, SkillDB_Start.TWIN_SPELL_SKILL_ID, 11500)));
-            itemsToAdd.Add(SoldBy(NpcName.RORELI_GILMARE, CreateSkillBook(skillBookBase, ItemId.PERFECT_RELEASE, SkillDB_Start.PERFECT_RELEASE_SKILL_ID, 24500)));
-            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(skillBookBase, ItemId.TWIN_SPELL_2, SkillDB_Start.TWIN_SPELL_MASTERY_SKILL_ID, 32000)));
-            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(skillBookBase, ItemId.VANISHING_TWIN, SkillDB_Start.VANISHING_TWIN_SKILL_ID, 40000)));
-            itemsToAdd.Add(DroppedBy(NpcName.A_DEEPLING_ORATOR, DropChance.UNCOMMON, CreateSkillBook(skillBookBase, ItemId.TIME_IS_POWER_2, SkillDB_Start.TIME_IS_POWER_2_SKILL_ID, 38000)));
-            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(skillBookBase, ItemId.EXPERT_CONTROL_2, SkillDB_Start.EXPERT_CONTROL_2_SKILL_ID, 80000)));
-            itemsToAdd.Add(DroppedBy(NpcName.SEED_OF_BLIGHT, DropChance.GUARANTEE_ONE, CreateSkillBook(skillBookBase, ItemId.SIBLING_SYNERGY, SkillDB_Start.SIBLING_SYNGERY_SKILL_ID, 65000))); 
-            itemsToAdd.Add(SoldBy(NpcName.BRAXON_MANFRED, CreateSkillBook(skillBookBase, ItemId.PARASITIC_TWIN, SkillDB_Start.PARASITIC_TWIN_SKILL_ID, 150000)));
-            itemsToAdd.Add(DroppedBy(NpcName.EVADNE_THE_CORRUPTED, DropChance.UNCOMMON, CreateSkillBook(skillBookBase, ItemId.TIME_IS_POWER_3, SkillDB_Start.TIME_IS_POWER_3_SKILL_ID, 98000)));
-            itemsToAdd.Add(DroppedBy(NpcName.FENTON_THE_BLIGHTED, DropChance.UNCOMMON, CreateSkillBook(skillBookBase, ItemId.TWIN_SPELL_3, SkillDB_Start.TWIN_SPELL_MASTERY_2_SKILL_ID, 120000))); 
-            itemsToAdd.Add(DroppedBy(NpcName.ELWIO_THE_TRAITOR, DropChance.UNCOMMON, CreateSkillBook(skillBookBase, ItemId.PERFECT_RELEASE_2, SkillDB_Start.PERFECT_RELEASE_2_SKILL_ID, 150000)));
-
-            SoldBy(NpcName.CERBANTIAS_FLAMEWARD, __instance.GetItemByID(ItemId.MAGICAL_SKIN));
+            itemsToAdd.Add(new ItemGenerator()
+                    .NewSkillBook(ItemId.TIME_IS_POWER, SkillDB_Start.TIME_IS_POWER_SKILL_ID, 700)
+                    .DroppedBy(NpcName.ZASHLYN_BLOODBANE, DropChance.UNCOMMON)
+                    .DroppedBy(NpcName.MOURNING, DropChance.UNCOMMON)
+                    .SoldBy(NpcName.NYLITH_VALORRI)
+                    .Generate(__instance));
+            itemsToAdd.Add(new ItemGenerator()
+                    .NewSkillBook(ItemId.EXPERT_CONTROL, SkillDB_Start.EXPERT_CONTROL_SKILL_ID, 9500).SoldBy(NpcName.RORELI_GILMARE)
+                    .Generate(__instance));
+            itemsToAdd.Add(new ItemGenerator()
+                    .NewSkillBook(ItemId.TWIN_SPELL, SkillDB_Start.TWIN_SPELL_SKILL_ID, 11500).SoldBy(NpcName.EDWIN_ANSEGG)
+                    .Generate(__instance));
+            itemsToAdd.Add(new ItemGenerator()
+                    .NewSkillBook(ItemId.PERFECT_RELEASE, SkillDB_Start.PERFECT_RELEASE_SKILL_ID, 24500).SoldBy(NpcName.RORELI_GILMARE)
+                    .Generate(__instance));
+            itemsToAdd.Add(new ItemGenerator()
+                    .NewSkillBook(ItemId.TWIN_SPELL_MASTERY, SkillDB_Start.TWIN_SPELL_MASTERY_SKILL_ID, 32000).SoldBy(NpcName.BRAXON_MANFRED)
+                    .Generate(__instance));
+            itemsToAdd.Add(new ItemGenerator()
+                    .NewSkillBook(ItemId.VANISHING_TWIN, SkillDB_Start.VANISHING_TWIN_SKILL_ID, 40000).SoldBy(NpcName.BRAXON_MANFRED)
+                    .Generate(__instance));
+            itemsToAdd.Add(new ItemGenerator()
+                    .NewSkillBook(ItemId.TIME_IS_POWER_2, SkillDB_Start.TIME_IS_POWER_2_SKILL_ID, 38000).DroppedBy(NpcName.A_DEEPLING_ORATOR, DropChance.UNCOMMON)
+                    .Generate(__instance));
+            itemsToAdd.Add(new ItemGenerator()
+                    .NewSkillBook(ItemId.EXPERT_CONTROL_2, SkillDB_Start.EXPERT_CONTROL_2_SKILL_ID, 80000).SoldBy(NpcName.BRAXON_MANFRED)
+                    .Generate(__instance));
+            itemsToAdd.Add(new ItemGenerator()
+                    .NewSkillBook(ItemId.SIBLING_SYNERGY, SkillDB_Start.SIBLING_SYNGERY_SKILL_ID, 65000).DroppedBy(NpcName.SEED_OF_BLIGHT, DropChance.GUARANTEE_ONE)
+                    .Generate(__instance));
+            itemsToAdd.Add(new ItemGenerator()
+                    .NewSkillBook(ItemId.PARASITIC_TWIN, SkillDB_Start.PARASITIC_TWIN_SKILL_ID, 150000).SoldBy(NpcName.BRAXON_MANFRED)
+                    .Generate(__instance));
+            itemsToAdd.Add(new ItemGenerator()
+                    .NewSkillBook(ItemId.TIME_IS_POWER_3, SkillDB_Start.TIME_IS_POWER_3_SKILL_ID, 98000).DroppedBy(NpcName.EVADNE_THE_CORRUPTED, DropChance.UNCOMMON)
+                    .Generate(__instance));
+            itemsToAdd.Add(new ItemGenerator()
+                    .NewSkillBook(ItemId.TWIN_SPELL_MASTERY_2, SkillDB_Start.TWIN_SPELL_MASTERY_2_SKILL_ID, 120000).DroppedBy(NpcName.FENTON_THE_BLIGHTED, DropChance.UNCOMMON)
+                    .Generate(__instance));
+            itemsToAdd.Add(new ItemGenerator()
+                    .NewSkillBook(ItemId.PERFECT_RELEASE_2, SkillDB_Start.PERFECT_RELEASE_2_SKILL_ID, 150000).DroppedBy(NpcName.ELWIO_THE_TRAITOR, DropChance.UNCOMMON)
+                    .Generate(__instance));
+            new ItemGenerator() { Id = ItemId.MAGICAL_SKIN }.SoldBy(NpcName.CERBANTIAS_FLAMEWARD); // item was missing from NPC in vanilla
 
             UpdateItemValues(__instance);
 
@@ -383,7 +406,7 @@ namespace Arcanism.Patches
 
         static void UpdateLegPieces(ItemDatabase __instance, List<Item> itemsToAdd)
         {
-            itemsToAdd.Add(DroppedBy(NpcName.MOLORAI_MILITIA_ARCANIST, DropChance.RARE, new EquipmentGenerator
+            itemsToAdd.Add(new ItemGenerator
             {
                 CreateFromBaseId = ItemId.REED_TROUSERS,
                 Id = ItemId.TRICKSTERS_PANTS,
@@ -406,9 +429,9 @@ namespace Arcanism.Patches
                 AppearanceType = "ReinforcedLeatherPants",
                 ColorsMain = (new Color32(90, 45, 45, 255), new Color32(120, 120, 120, 255)),
                 ColorsLeather = (new Color32(160, 160, 160, 255), new Color32(120, 120, 120, 255)),
-            }.Generate(__instance)));
+            }.DroppedBy(NpcName.MOLORAI_MILITIA_ARCANIST, DropChance.RARE).Generate(__instance));
 
-            itemsToAdd.Add(DroppedBy(NpcName.PRIEL_DECEIVER, DropChance.RARE, new EquipmentGenerator
+            itemsToAdd.Add(new ItemGenerator
             {
                 CreateFromBaseId = ItemId.COMPRESSION_WRAPS,
                 Id = ItemId.TATTERED_WRAP,
@@ -429,41 +452,42 @@ namespace Arcanism.Patches
                 ColorsMain = (new Color32(60, 57, 52, 255), new Color32(80, 74, 70, 255)),
                 ColorsLeather = (new Color32(50, 56, 45, 255), new Color32(50, 56, 45, 255)),
 
-            }.Generate(__instance)));
+            }.DroppedBy(NpcName.PRIEL_DECEIVER, DropChance.RARE).Generate(__instance));
 
-            itemsToAdd.Add(DroppedBy(NpcName.VESSEL_SIRAETHE, DropChance.RARE, new EquipmentGenerator
+            itemsToAdd.Add(new ItemGenerator
             {
                 CreateFromBaseId = ItemId.BRAXONIAN_LINENS,
                 Id = ItemId.LUNAR_WEAVE,
                 Name = "Lunar Weave",
                 Lore = "This unusually silky and light lower enrobement literally pulses with latent magical energy.",
                 Level = 39,
-                HP = 130,
-                Mana = 250,
-                AC = 30,
-                End = 10,
-                Int = 30,
-                Wis = 25,
-                Cha = 30,
+                HP = 0,
+                Mana = 200,
+                AC = 0,
+                End = 0,
+                Agi = 15,
+                Int = 25,
+                Wis = 16,
+                Cha = 20,
                 Res = 4,
-                Value = 27500,
+                Value = 32000,
                 AppearanceType = "ClothPants",
                 ColorsMain = (new Color32(80, 55, 80, 255), new Color32(190, 150, 0, 255)),
                 ColorsLeather = (new Color32(80, 55, 80, 255), new Color32(190, 150, 0, 255)),
                 Classes = new List<Class>() { GameData.ClassDB.Arcanist }
-            }.Generate(__instance)));
+            }.DroppedBy(NpcName.VESSEL_SIRAETHE, DropChance.RARE).Generate(__instance));
 
-            new EquipmentGenerator { Id = ItemId.CAVESILK_TROUSERS, Level = 20, HP = 40, Mana = 75, AC = 10, End = 3, Int = 10, Wis = 4, Cha = 15, Res = 1, Value = 2500, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.LINEN_BEDPANTS, Level = 24, HP = 75, Mana = 75, AC = 20, End = 0, Int = 16, Wis = 4, Cha = 2, Res = 0, Value = 5100, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.STARCHED_WOOL_LEGGINGS, Level = 28, HP = 140, Mana = 60, AC = 55, End = 14, Int = 9, Wis = 17, Cha = 6, Res = 2, Value = 9000, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.SIVAKAYAN_BREECHES, Level = 29, HP = 0, Mana = 140, AC = 20, End = 0, Int = 25, Wis = 16, Cha = 0, Res = 3, Value = 11200, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.BRAXONIAN_LINENS, Level = 31, HP = 50, Mana = 150, AC = 30, End = 10, Int = 20, Wis = 26, Cha = 10, Res = 2, Value = 12500, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.ILLUSIONIST_TROUSERS, Level = 33, HP = 65, Mana = 200, AC = 10, End = 0, Int = 25, Wis = 12, Cha = 20, Res = 2, Value = 18545, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.CAVESILK_TROUSERS, Level = 20, HP = 40, Mana = 75, AC = 10, End = 3, Int = 10, Wis = 4, Cha = 15, Res = 1, Value = 2500, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.LINEN_BEDPANTS, Level = 24, HP = 75, Mana = 75, AC = 20, End = 0, Int = 16, Wis = 4, Cha = 2, Res = 0, Value = 5100, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.STARCHED_WOOL_LEGGINGS, Level = 28, HP = 140, Mana = 60, AC = 55, End = 14, Int = 9, Wis = 17, Cha = 6, Res = 2, Value = 9000, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.SIVAKAYAN_BREECHES, Level = 29, HP = 50, Mana = 130, AC = 45, End = 10, Int = 18, Wis = 15, Cha = 0, Res = 3, Value = 11200, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.BRAXONIAN_LINENS, Level = 31, HP = 0, Mana = 150, AC = 20, End = 5, Int = 25, Wis = 6, Cha = 6, Res = 4, Value = 12500, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.ILLUSIONIST_TROUSERS, Level = 33, HP = 65, Mana = 150, AC = 10, End = 0, Int = 20, Wis = 12, Cha = 25, Res = 3, Value = 18545, }.Generate(__instance);
         }
 
         static void UpdateChestPieces(ItemDatabase __instance, List<Item> itemsToAdd)
         {
-            itemsToAdd.Add(SoldBy(NpcName.EDWIN_ANSEGG, new EquipmentGenerator
+            itemsToAdd.Add(new ItemGenerator
             {
                 CreateFromBaseId = ItemId.FUNERAL_GARB,
                 Id = ItemId.NOVICE_ROBE,
@@ -480,33 +504,35 @@ namespace Arcanism.Patches
                 Res = 1,
                 Value = 650,
                 Classes = new List<Class>() { GameData.ClassDB.Arcanist },
-            }.Generate(__instance)));
+            }.SoldBy(NpcName.EDWIN_ANSEGG).Generate(__instance));
 
-            DroppedBy(NpcName.RISEN_DRUID, DropChance.UNCOMMON, new EquipmentGenerator { Id = ItemId.SPIDERSILK_SHIRT, HP = 60, Mana = 55, AC = 27, End = 2, Int = 10, Wis = 7, Cha = 7, Res = 1, Value = 950, }.Generate(__instance));
-            new EquipmentGenerator { Id = ItemId.BRAXONIAN_WRAP, HP = 70, Mana = 120, AC = 28, End = 4, Int = 15, Wis = 14, Cha = 9, Res = 2, Value = 2950, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.PRESERVED_CLOTH_COAT, HP = 170, Mana = 110, AC = 36, End = 12, Int = 18, Wis = 18, Cha = 9, Res = 1, Value = 5500, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.SIVAKAYAN_DRESSCOAT, HP = 200, Mana = 200, AC = 38, End = 6, Int = 23, Wis = 23, Cha = 15, Res = 2, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.BRAXONIAN_ROYAL_TUNIC, HP = 350, Mana = 800, AC = 45, End = 5, Int = 30, Wis = 30, Cha = 30, Res = 5, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.ELDOTHS_FINERY, HP = 650, Mana = 600, AC = 60, End = 15, Int = 36, Wis = 25, Cha = 36, Res = 4, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.SPIDERSILK_SHIRT, HP = 60, Mana = 55, AC = 27, End = 2, Int = 10, Wis = 7, Cha = 7, Res = 1, Value = 950, }
+                .DroppedBy(NpcName.RISEN_DRUID, DropChance.UNCOMMON)
+                .Generate(__instance);
+            new ItemGenerator { Id = ItemId.BRAXONIAN_WRAP, HP = 70, Mana = 120, AC = 28, End = 4, Int = 15, Wis = 14, Cha = 9, Res = 2, Value = 2950, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.PRESERVED_CLOTH_COAT, HP = 170, Mana = 110, AC = 36, End = 12, Int = 18, Wis = 18, Cha = 9, Res = 1, Value = 5500, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.SIVAKAYAN_DRESSCOAT, HP = 200, Mana = 200, AC = 38, End = 6, Int = 23, Wis = 23, Cha = 15, Res = 2, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.BRAXONIAN_ROYAL_TUNIC, HP = 350, Mana = 800, AC = 45, End = 5, Int = 30, Wis = 30, Cha = 30, Res = 5, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.ELDOTHS_FINERY, HP = 650, Mana = 600, AC = 60, End = 15, Int = 36, Wis = 25, Cha = 36, Res = 4, }.Generate(__instance);
         }
 
         static void UpdateTheFeets(ItemDatabase __instance, List<Item> itemsToAdd)
         {
-            new EquipmentGenerator { Id = ItemId.DEVOUT_MOCCASINS, HP = 15, Mana = 60, AC = 15, End = 5, Int = 8, Wis = 13, Cha = 2, Res = 1, Value = 1900, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.FLAMESOLES, HP = 90, Mana = 120, AC = 23, End = 12, Int = 13, Wis = 15, Cha = 11, Res = 2, Value = 3000, }.Generate(__instance);
-            var shadowSteps = new EquipmentGenerator { Id = ItemId.SHADOWSTEP_SHOES, HP = 170, Mana = 170, AC = 35, End = 8, Dex = 12, Agi = 12, Int = 20, Wis = 11, Cha = 16, Res = 2, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.DEVOUT_MOCCASINS, HP = 15, Mana = 60, AC = 15, End = 5, Int = 8, Wis = 13, Cha = 2, Res = 1, Value = 1900, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.FLAMESOLES, HP = 90, Mana = 120, AC = 23, End = 12, Int = 13, Wis = 15, Cha = 11, Res = 2, Value = 3000, }.Generate(__instance);
+            var shadowSteps = new ItemGenerator { Id = ItemId.SHADOWSTEP_SHOES, HP = 170, Mana = 170, AC = 35, End = 8, Dex = 12, Agi = 12, Int = 20, Wis = 11, Cha = 16, Res = 2, }.Generate(__instance);
             shadowSteps.WornEffect = GameData.SpellDatabase.GetSpellByID("108204"); // Adding flight of foot 1 becasue it makes sense!
-            new EquipmentGenerator { Id = ItemId.ELDERS_SLIPPERS, HP = 125, Mana = 400, AC = 12, End = 4, Int = 20, Wis = 27, Cha = 8, Res = 3, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.BRAXONIAN_ROYAL_SHOES, HP = 135, Mana = 250, AC = 21, End = 5, Int = 23, Wis = 15, Cha = 25, Res = 2, Value = 15000, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.PIOUS_SANDALS, HP = 150, Mana = 290, AC = 25, End = 8, Int = 25, Wis = 30, Cha = 22, Res = 3, Value = 20500, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.ELDERS_SLIPPERS, HP = 125, Mana = 400, AC = 12, End = 4, Int = 20, Wis = 27, Cha = 8, Res = 3, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.BRAXONIAN_ROYAL_SHOES, HP = 135, Mana = 250, AC = 21, End = 5, Int = 23, Wis = 15, Cha = 25, Res = 2, Value = 15000, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.PIOUS_SANDALS, HP = 150, Mana = 290, AC = 25, End = 8, Int = 25, Wis = 30, Cha = 22, Res = 3, Value = 20500, }.Generate(__instance);
         }
 
         static void UpdateWaistPieces(ItemDatabase __instance, List<Item> itemsToAdd)
         {
-            new EquipmentGenerator { Id = ItemId.OGRESKIN_CORD, HP = 28, Mana = 35, AC = 14, End = 5, Int = 6, Wis = 4, Cha = 0, Res = 0, }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.SASH_OF_THE_LOST_GUARD, HP = 200, Mana = 100, AC = 35, End = 10, Int = 5, Wis = 8, Cha = 4, }.Generate(__instance); 
-            new EquipmentGenerator { Id = ItemId.BRAXONIAN_SASH, HP = 100, Mana = 200, AC = 0, End = 0, Int = 15, Wis = 12, Cha = 8, Res = 1, }.Generate(__instance);
-            itemsToAdd.Add(DroppedBy(NpcName.DIAMOND_HOUND, DropChance.RARE, new EquipmentGenerator
+            new ItemGenerator { Id = ItemId.OGRESKIN_CORD, HP = 28, Mana = 35, AC = 14, End = 5, Int = 6, Wis = 4, Cha = 0, Res = 0, }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.SASH_OF_THE_LOST_GUARD, HP = 200, Mana = 100, AC = 35, End = 10, Int = 5, Wis = 8, Cha = 4, }.Generate(__instance); 
+            new ItemGenerator { Id = ItemId.BRAXONIAN_SASH, HP = 100, Mana = 200, AC = 0, End = 0, Int = 15, Wis = 12, Cha = 8, Res = 1, }.Generate(__instance);
+            itemsToAdd.Add(new ItemGenerator
             {
                 CreateFromBaseId = ItemId.PRISMATIC_WARCORD,
                 Id = ItemId.MANA_CHAIN,
@@ -523,11 +549,11 @@ namespace Arcanism.Patches
                 Res = 3,
                 Value = 8500,
                 Classes = new List<Class>() { GameData.ClassDB.Arcanist }
-            }.Generate(__instance)));
-            new EquipmentGenerator { Id = ItemId.CHARMED_BELT, HP = 180, Mana = 200, AC = 16, End = 5, Agi = 5, Int = 12, Wis = 9, Cha = 23, Res = 2, Value = 11200 }.Generate(__instance); 
-            new EquipmentGenerator { Id = ItemId.FLOWING_BLIGHT_SILK_SASH, HP = 10, Mana = 300, AC = 0, Str = 0, Dex = 0, Agi = 10, End = 0, Int = 18, Wis = 18, Cha = 18, Value = 15500, Res = 3 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.ROYAL_WAISTBAND, HP = 240, Mana = 200, AC = 30, End = 18, Agi=5, Int = 18, Wis = 9, Cha = 18, Value = 17800, Res = 3 }.Generate(__instance);
-            itemsToAdd.Add(DroppedBy(NpcName.BLIGHT_WYRM, DropChance.GUARANTEE_ONE, new EquipmentGenerator
+            }.DroppedBy(NpcName.DIAMOND_HOUND, DropChance.RARE).Generate(__instance));
+            new ItemGenerator { Id = ItemId.CHARMED_BELT, HP = 180, Mana = 200, AC = 16, End = 5, Agi = 5, Int = 12, Wis = 9, Cha = 23, Res = 2, Value = 11200 }.Generate(__instance); 
+            new ItemGenerator { Id = ItemId.FLOWING_BLIGHT_SILK_SASH, HP = 10, Mana = 300, AC = 0, Str = 0, Dex = 0, Agi = 10, End = 0, Int = 18, Wis = 18, Cha = 18, Value = 15500, Res = 3 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.ROYAL_WAISTBAND, HP = 240, Mana = 200, AC = 30, End = 18, Agi=5, Int = 18, Wis = 9, Cha = 18, Value = 17800, Res = 3 }.Generate(__instance);
+            itemsToAdd.Add(new ItemGenerator
             {
                 CreateFromBaseId = ItemId.BRAXONIAN_SASH,
                 Id = ItemId.VIZIERS_LAMENT,
@@ -545,50 +571,50 @@ namespace Arcanism.Patches
                 Res = 5,
                 Value = 30000,
                 Classes = new List<Class>() { GameData.ClassDB.Arcanist, GameData.ClassDB.Stormcaller }
-            }.Generate(__instance)));
+            }.DroppedBy(NpcName.BLIGHT_WYRM, DropChance.GUARANTEE_ONE).Generate(__instance));
         }
 
         static void UpdateBackPieces(ItemDatabase __instance, List<Item> itemsToAdd)
         {
-            new EquipmentGenerator { Id = ItemId.WARDWARPED_CAPE, HP = 600, Mana = 0, AC = 70, End = 0, Dex=15, Agi=15, Int = 11, Wis = 10, Cha = 13, Res = 7 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.AZYNTHIAN_CAPE, HP = 200, Mana = 400, AC = 20, Dex = 0, Agi = 0, Str = 0, End = 0, Int = 22, Wis = 15, Cha = 26, Res = 4 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.WARDWARPED_CAPE, HP = 600, Mana = 0, AC = 70, End = 0, Dex=15, Agi=15, Int = 11, Wis = 10, Cha = 13, Res = 7 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.AZYNTHIAN_CAPE, HP = 200, Mana = 400, AC = 20, Dex = 0, Agi = 0, Str = 0, End = 0, Int = 22, Wis = 15, Cha = 26, Res = 4 }.Generate(__instance);
         }
 
         static void UpdateHeadPieces(ItemDatabase __instance, List<Item> itemsToAdd)
         {
-            DroppedBy(NpcName.ARCANE_PUPIL, DropChance.UNCOMMON, new EquipmentGenerator { Id = ItemId.LOST_WIZARDING_HAT, Res = 4 }.Generate(__instance));
+            new ItemGenerator { Id = ItemId.LOST_WIZARDING_HAT, Res = 4 }.DroppedBy(NpcName.ARCANE_PUPIL, DropChance.UNCOMMON).Generate(__instance);
         }
 
         static void UpdateWristPieces(ItemDatabase __instance, List<Item> itemsToAdd)
         {
-            new EquipmentGenerator { Id = ItemId.RUNEWOVEN_BRACER, HP = 0, Mana = 20, Int = 6, Wis = 2, Cha = 2, Res = 1 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.TWISTED_SPIDER_LEG, HP = 50, Mana = 28, AC = 12, Int = 8, Wis = 6, Cha = 0, Res = 0 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.IGNITING_BRACE, HP = 40, Mana = 40, AC = 5, Int = 18, Wis = 0, Cha = 0, Res = 0 }.Generate(__instance).WeaponProcChance = 10;
-            new EquipmentGenerator { Id = ItemId.CHITIN_BRACER, HP = 65, Mana = 65, AC = 15, Int = 12, Wis = 14, Cha = 0, Res = 2 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.MOONSTONE_BANGLE, HP = 0, Mana = 130, AC = 0, Int = 15, Wis = 15, Cha = 15, Res = 3 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.BLIGHTED_SILK_WRAPS, HP = 120, Mana = 120, End = 0, AC = 0, Agi = 15, Dex = 15, Int = 15, Wis = 15, Cha = 15, Res = 2 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.ERODED_BANGLE }.Generate(__instance).WeaponProcChance = 6;
-            new EquipmentGenerator { Id = ItemId.BRAXONIAN_BRACELET, HP = 100, Mana = 150, AC = 22, End = 12, Int = 19, Wis = 20, Cha = 8, Res = 2 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.BLESSED_BRAXONIAN_BRACELET, HP = 150, Mana = 200, AC = 30, End = 14, Int = 24, Wis = 24, Cha = 11, Res = 3, Value = 11000 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.PERFECT_LINKS, HP = 80, Mana = 200, AC = 15, Int = 6, Wis = 12, Cha = 26, Res = 5 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.WARDED_BRACE, HP = 500, Mana = 200, End = 15, AC = 70, Int = 5, Wis = 14, Cha = 5, Res = 3 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.GARDENERS_WRIST_WRAP, HP = 220, Mana = 400, Int = 15, Wis = 30, Cha = 7, Res = 1 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.BRACELET_OF_VESSEL, HP = 50, Mana = 300, AC = 12, Int = 26, Wis = 0, Cha = 20, Res = 4 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.RESONATING_BRACE, HP = 0, Mana = 300, AC = 40, Int = 5, Wis = 8, Cha = 5, Res = 8 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.FUNGAL_WRAPPED_BRACER, HP = 150, Mana = 150, AC = 40, Int = 8, Wis = 8, Cha = 2, Res = 8 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.RUNEWOVEN_BRACER, HP = 0, Mana = 20, Int = 6, Wis = 2, Cha = 2, Res = 1 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.TWISTED_SPIDER_LEG, HP = 50, Mana = 28, AC = 12, Int = 8, Wis = 6, Cha = 0, Res = 0 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.IGNITING_BRACE, HP = 40, Mana = 40, AC = 5, Int = 18, Wis = 0, Cha = 0, Res = 0 }.Generate(__instance).WeaponProcChance = 10;
+            new ItemGenerator { Id = ItemId.CHITIN_BRACER, HP = 65, Mana = 65, AC = 15, Int = 12, Wis = 14, Cha = 0, Res = 2 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.MOONSTONE_BANGLE, HP = 0, Mana = 130, AC = 0, Int = 15, Wis = 15, Cha = 15, Res = 3 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.BLIGHTED_SILK_WRAPS, HP = 120, Mana = 120, End = 0, AC = 0, Agi = 15, Dex = 15, Int = 15, Wis = 15, Cha = 15, Res = 2 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.ERODED_BANGLE }.Generate(__instance).WeaponProcChance = 6;
+            new ItemGenerator { Id = ItemId.BRAXONIAN_BRACELET, HP = 100, Mana = 150, AC = 22, End = 12, Int = 19, Wis = 20, Cha = 8, Res = 2 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.BLESSED_BRAXONIAN_BRACELET, HP = 150, Mana = 200, AC = 30, End = 14, Int = 24, Wis = 24, Cha = 11, Res = 3, Value = 11000 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.PERFECT_LINKS, HP = 80, Mana = 200, AC = 15, Int = 6, Wis = 12, Cha = 26, Res = 5 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.WARDED_BRACE, HP = 500, Mana = 200, End = 15, AC = 70, Int = 5, Wis = 14, Cha = 5, Res = 3 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.GARDENERS_WRIST_WRAP, HP = 220, Mana = 400, Int = 15, Wis = 30, Cha = 7, Res = 1 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.BRACELET_OF_VESSEL, HP = 50, Mana = 300, AC = 12, Int = 26, Wis = 0, Cha = 20, Res = 4 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.RESONATING_BRACE, HP = 0, Mana = 300, AC = 40, Int = 5, Wis = 8, Cha = 5, Res = 8 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.FUNGAL_WRAPPED_BRACER, HP = 150, Mana = 150, AC = 40, Int = 8, Wis = 8, Cha = 2, Res = 8 }.Generate(__instance);
         }
 
         static void UpdateShoulderPieces(ItemDatabase __instance, List<Item> itemsToAdd)
         {
-            new EquipmentGenerator { Id = ItemId.DESERT_SILK_SLEEVES, HP = 0, Mana = 80, AC = 0, Str = 0, Dex = 0, End = 0, Int = 10, Wis = 2, Cha = 7, Res = 1 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.FUNGUS_COVERED_ARMBAND, HP = 80, Mana = 40, AC = 15, Str = 0, Dex = 0, End = 8, Int = 7, Wis = 15, Cha = 4, Res = 0 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.INTRICATE_SLEEVES, HP = 90, Mana = 90, AC = 15, End = 8, Int = 11, Wis = 6, Cha = 16, Res = 1 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.GIFTED_SLEEVES, HP = 30, Mana = 120, AC = 3, Str = 0, End = 0, Int = 23, Wis = 19, Cha = 6, Res = 2 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.BRAXONIAN_ROYAL_ARMBAND, HP = 250, Mana = 250, AC = 30, End = 12, Int = 20, Wis = 11, Cha = 20, Res = 2 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.DESERT_SILK_SLEEVES, HP = 0, Mana = 80, AC = 0, Str = 0, Dex = 0, End = 0, Int = 10, Wis = 2, Cha = 7, Res = 1 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.FUNGUS_COVERED_ARMBAND, HP = 80, Mana = 40, AC = 15, Str = 0, Dex = 0, End = 8, Int = 7, Wis = 15, Cha = 4, Res = 0 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.INTRICATE_SLEEVES, HP = 90, Mana = 90, AC = 15, End = 8, Int = 11, Wis = 6, Cha = 16, Res = 1 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.GIFTED_SLEEVES, HP = 30, Mana = 120, AC = 3, Str = 0, End = 0, Int = 23, Wis = 19, Cha = 6, Res = 2 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.BRAXONIAN_ROYAL_ARMBAND, HP = 250, Mana = 250, AC = 30, End = 12, Int = 20, Wis = 11, Cha = 20, Res = 2 }.Generate(__instance);
 
-            new EquipmentGenerator { Id = ItemId.DREAMY_SLEEVES, HP = 0, Mana = 350, AC = 0, End = 0, Int = 24, Wis = 12, Cha = 26, Res = 4, Classes = new List<Class>() { GameData.ClassDB.Arcanist } }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.ARMBANDS_OF_ORDER, HP = 280, Mana = 120, AC = 60, Str = 20, End = 25, Int = 10, Wis = 10, Cha = 10, Res = 2 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.BONEBANDED_ARMGUARD, HP = 180, Mana = 300, AC = 40, End = 15, Int = 18, Wis = 25, Cha = 12, Res = 3 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.DREAMY_SLEEVES, HP = 0, Mana = 350, AC = 0, End = 0, Int = 24, Wis = 12, Cha = 26, Res = 4, Classes = new List<Class>() { GameData.ClassDB.Arcanist } }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.ARMBANDS_OF_ORDER, HP = 280, Mana = 120, AC = 60, Str = 20, End = 25, Int = 10, Wis = 10, Cha = 10, Res = 2 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.BONEBANDED_ARMGUARD, HP = 180, Mana = 300, AC = 40, End = 15, Int = 18, Wis = 25, Cha = 12, Res = 3 }.Generate(__instance);
         }
 
         static void UpdateRings(ItemDatabase __instance, List<Item> itemsToAdd)
@@ -599,38 +625,38 @@ namespace Arcanism.Patches
         static void UpdateNeckPieces(ItemDatabase __instance, List<Item> itemsToAdd)
         {
             // decent variety of available amulets with interesting stat differences, not much to change
-            new EquipmentGenerator { Id = ItemId.CREST_OF_BRAXONIA, HP = 180, Mana = 180, AC = 20, End = 15 }.Generate(__instance); // needs bigger core stats to compete wtih Soul Echo's Mana Charge II
+            new ItemGenerator { Id = ItemId.CREST_OF_BRAXONIA, HP = 180, Mana = 180, AC = 20, End = 15 }.Generate(__instance); // needs bigger core stats to compete wtih Soul Echo's Mana Charge II
         }
 
         static void UpdateWeaponSlots(ItemDatabase __instance, List<Item> itemsToAdd)
         {
-            new EquipmentGenerator { Id = ItemId.WEAK_WAND }.TuneWand(7, 1, 10).Generate(__instance); // Competing with: Ice Bolt: 19 damage
-            new EquipmentGenerator { Id = ItemId.COPPER_SCEPTRE }.TuneWand(24, 2, 25).Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.ADEPT_WAND }.TuneWand(22, 1, 18).Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.WAND_OF_AIR }.TuneWand(29, 1, 18, SpellDB_Start.JOLT_SPELL_ID, 10).Generate(__instance); // Competing with: Jolt: 200
-            new EquipmentGenerator { Id = ItemId.HARDENED_SCEPTRE }.TuneWand(80, 2, 25).Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.EYESTALK_WAND }.TuneWand(65, 2, 7, null, 25).Generate(__instance);
+            new ItemGenerator { Id = ItemId.WEAK_WAND }.TuneWand(7, 1, 10).Generate(__instance); // Competing with: Ice Bolt: 19 damage
+            new ItemGenerator { Id = ItemId.COPPER_SCEPTRE }.TuneWand(24, 2, 25).Generate(__instance);
+            new ItemGenerator { Id = ItemId.ADEPT_WAND }.TuneWand(22, 1, 18).Generate(__instance);
+            new ItemGenerator { Id = ItemId.WAND_OF_AIR }.TuneWand(29, 1, 18, SpellDB_Start.JOLT_SPELL_ID, 10).Generate(__instance); // Competing with: Jolt: 200
+            new ItemGenerator { Id = ItemId.HARDENED_SCEPTRE }.TuneWand(80, 2, 25).Generate(__instance);
+            new ItemGenerator { Id = ItemId.EYESTALK_WAND }.TuneWand(65, 2, 7, null, 25).Generate(__instance);
 
-            new EquipmentGenerator { Id = ItemId.ARGOS_GRIMOIRE, HP = 0, Mana = 60, AC = 0, Int = 8, Wis = 7, Cha = 2, Res = 1 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.MAGUS_SHIELD, HP = 40, Mana = 18, AC = 25, Int = 4, Wis = 4, Cha = 6, Res = 1 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.OGRESPICE_BUNDLE, HP = 45, Mana = 0, AC = 0, Int = 7, Wis = 0, Cha = 6, Res = 0 }.TuneWand(80, 3, 18, null, 50).Generate(__instance); // fitty percent chance to cast sleep, decent range, but slower than vanilla, and not a good DPS option
+            new ItemGenerator { Id = ItemId.ARGOS_GRIMOIRE, HP = 0, Mana = 60, AC = 0, Int = 8, Wis = 7, Cha = 2, Res = 1 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.MAGUS_SHIELD, HP = 40, Mana = 18, AC = 25, Int = 4, Wis = 4, Cha = 6, Res = 1 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.OGRESPICE_BUNDLE, HP = 45, Mana = 0, AC = 0, Int = 7, Wis = 0, Cha = 6, Res = 0 }.TuneWand(80, 3, 18, null, 50).Generate(__instance); // fitty percent chance to cast sleep, decent range, but slower than vanilla, and not a good DPS option
 
             // Here's an interesting one -- by default this does no damage and is a 1 hander. Let's change it to be a 2 hander with no damage, completely disabling regular attacks, but with good stats to buff casting.
             // NB It competes with Diamondine/Royal Carapace + weapons from Spectral Sceptre to Scorched W Stick
-            new EquipmentGenerator { Id = ItemId.PEARLESCENT_KELP_TOTEM, Damage = 0, HP = 20, Mana = 110, AC = 5, Int = 30, Wis = 20, Cha = 0, Res = 7, SlotType = Item.SlotType.Primary, WeaponType = Item.WeaponType.TwoHandStaff }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.PEARLESCENT_KELP_TOTEM, Damage = 0, HP = 20, Mana = 110, AC = 5, Int = 30, Wis = 20, Cha = 0, Res = 7, SlotType = Item.SlotType.Primary, WeaponType = Item.WeaponType.TwoHandStaff }.Generate(__instance);
 
             // Braxonian: Defense, Int,Wis
             // Diamondine: Magic, Int,Cha, Res
             // Royal Carapace: Balanced
-            new EquipmentGenerator { Id = ItemId.BRAXONIAN_SHIELD, HP = 250, Mana = 65, AC = 50, End = 13, Int = 10, Wis = 10, Cha = 5, Res = 1 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.DIAMONDINE_SHIELD, HP = 65, Mana = 250, AC = 20, End = 0, Int = 12, Wis = 4, Cha = 12, Res = 2 }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.ROYAL_CARAPACE, HP = 160, Mana = 160, AC = 35, End = 6, Int = 9, Wis = 9, Cha = 9, Res = 1 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.BRAXONIAN_SHIELD, HP = 250, Mana = 65, AC = 50, End = 13, Int = 10, Wis = 10, Cha = 5, Res = 1 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.DIAMONDINE_SHIELD, HP = 65, Mana = 250, AC = 20, End = 0, Int = 12, Wis = 4, Cha = 12, Res = 2 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.ROYAL_CARAPACE, HP = 160, Mana = 160, AC = 35, End = 6, Int = 9, Wis = 9, Cha = 9, Res = 1 }.Generate(__instance);
 
             // Cinder of Birth: despite higher item level this actually drops 25% from Beady, lvl 16 in swamp who isn't hard, so could be gotten around lvl 14...
             // it's a close range weapon with chance to cast Brax's Rage which is a relatively poweful medium spell now, so it's a fantastic item for this level
             // Let's make it interesting by giving it a high damage, low frequency attack -- encouraging a meta of darting in to hit and retreating
             // Icnreasing Brax's Rage proc chance a lot to account for the lower attack speed. This will make it feel really heavy whenever it procs!
-            new EquipmentGenerator
+            new ItemGenerator
             {
                 Id = ItemId.CINDER_OF_BIRTH,
                 HP = 30,
@@ -650,8 +676,8 @@ namespace Arcanism.Patches
             // Boneweaver's gets nerfs relative to peers but higher raw wand DPS, and the benefit of its amazing DoT
             // Fungal Bouquet... vanilla spell proc is utterly useless at this level. Let's make it have poor dmg, fantastic int/defense, *NEGATIVE* cha mod
             // So now, there's actually interesting choices at this level!
-            new EquipmentGenerator { Id = ItemId.BLACKFLAME_TORCH, Damage = 6, AttackDelay = 1, HP = 0, Mana = 90, Int = 17, Wis = 5, Cha = 13, Res = 3 }.TuneWand(180, 2, 25).Generate(__instance);
-            new EquipmentGenerator
+            new ItemGenerator { Id = ItemId.BLACKFLAME_TORCH, Damage = 6, AttackDelay = 1, HP = 0, Mana = 90, Int = 17, Wis = 5, Cha = 13, Res = 3 }.TuneWand(180, 2, 25).Generate(__instance);
+            new ItemGenerator
             {
                 Id = ItemId.SCORCHED_WALKING_STICK,
                 ClickEffect = GameData.SpellDatabase.GetSpellByID(SpellDB_Start.SCORCHED_FURY_SPELL_ID),
@@ -666,18 +692,18 @@ namespace Arcanism.Patches
                 SlotType = Item.SlotType.Primary,
                 WeaponType = Item.WeaponType.TwoHandStaff
             }.Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.BONEWEAVERS_LEG, HP = 25, Mana = 60, AC = 0, End = 0, Int = 12, Wis = 8, Cha = 3, Res = 2 }.TuneWand(140, 1, 18).Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.FUNGAL_BOUQUET, HP = 120, Mana = 50, AC = 40, End = 15, Int = 25, Wis = 5, Cha = -10, Res = 0 }.TuneWand(150, 1.5f, 12).Generate(__instance);
+            new ItemGenerator { Id = ItemId.BONEWEAVERS_LEG, HP = 25, Mana = 60, AC = 0, End = 0, Int = 12, Wis = 8, Cha = 3, Res = 2 }.TuneWand(140, 1, 18).Generate(__instance);
+            new ItemGenerator { Id = ItemId.FUNGAL_BOUQUET, HP = 120, Mana = 50, AC = 40, End = 15, Int = 25, Wis = 5, Cha = -10, Res = 0 }.TuneWand(150, 1.5f, 12).Generate(__instance);
 
             // Shivering Step drop, requires going out of your way, needs to be worth it. In Vanilla, casts Mithril Shards (400 magic) at 5% chance per 2 seconds
             // I'm making it similar in stats to Blackflame -- noting this item is 4 lvls higher -- but with extremely low raw DPS,
             // and making it interesting by buffing Mithril Shards a lot and giving this a higher proc chance, so it's an all-or-nothing gamble weapon
             // NB with mithril shards @ 1400 dmg and 18% chance to proc per second, this does about 252 dps *on average*
-            new EquipmentGenerator { Id = ItemId.DREAMY_WAND, Damage = 1, AttackDelay = 1, HP = 0, Mana = 120, AC = 0, Int = 16, Wis = 5, Cha = 12, Res = 3 }.TuneWand(1, 1, 25, null, 18).Generate(__instance);
+            new ItemGenerator { Id = ItemId.DREAMY_WAND, Damage = 1, AttackDelay = 1, HP = 0, Mana = 120, AC = 0, Int = 16, Wis = 5, Cha = 12, Res = 3 }.TuneWand(1, 1, 25, null, 18).Generate(__instance);
 
             // Here's an interesting idea. Cryst. Tactics + Celestial Spike are similar lvl and as a combo they're *aesthetic* and feel very magical. Sounds like it's time to design a set bonus system!
             // Note Cryst. Tactics is *not a weapon* so the set involves zero weapon dps and needs good stats to balance that out.
-            new EquipmentGenerator
+            new ItemGenerator
             {
                 Id = ItemId.CRYSTALLISED_TACTICS,
                 HP = 70,
@@ -696,16 +722,17 @@ namespace Arcanism.Patches
             // and you want to be saving them to farm Astra later because they're a pain, and (as a new player) you probably won't even know how to kill them 'til later.
             // So, I'm making it a rare drop from Celestial Matter instead, and if you're game enough to spend said flower thingies (forgotten hope? lost faith? strangled echidna? I don't remember) 
             // then you now at least have UNCOMMON chance from Stardust themselves. Probably in addition to the existing RARE chance so a very remote chance to get 2. Yay you!
-            DroppedBy(NpcName.CELESTIAL_MATTER, DropChance.RARE, 
-                DroppedBy(NpcName.STARDUST, DropChance.UNCOMMON, new EquipmentGenerator { Id = ItemId.CELESTIAL_SPIKE, HP = 150, Mana = 150, AC = 22, End = 10, Int = 14, Wis = 5, Cha = 10, Res = 1,
-                Lore = "This unique item's true power is only unlocked when equipped alongside other crystals or enchanted stones, when its celestial facets send powerful fractal ripples, intensifying their glow two-fold."
-            }.Generate(__instance)));
+            new ItemGenerator { Id = ItemId.CELESTIAL_SPIKE, HP = 150, Mana = 150, AC = 22, End = 10, Int = 14, Wis = 5, Cha = 10, Res = 1,
+                Lore = "This unique item's true power is only unlocked when equipped alongside other crystals or enchanted stones, when its celestial facets send powerful fractal ripples, intensifying their glow two-fold." 
+                }.DroppedBy(NpcName.CELESTIAL_MATTER, DropChance.RARE)
+                .DroppedBy(NpcName.STARDUST, DropChance.UNCOMMON)
+                .Generate(__instance);
 
             // Mem. of Snow = ice version of Cinder of Birth! But higher level, and with more stat sacrifices,  but a much more powerful spell attached.
             // Again, keep in mind this is a close range weapon... needs to have good damage to be worth getting up close to use.
             // base dmg = 840/3 = 280 + Ice Spear 1920/3 * .42 = 268 DPS avg,c total = 280+268=549~
             // Because the damage is so high, I'm adding negatives to defense as well as a significant mana penalty, to make it like "you can use this for good damage, but it means you're focusing more on weapon than spells"
-            new EquipmentGenerator
+            new ItemGenerator
             {
                 Id = ItemId.MEMORIES_OF_SNOW,
                 HP = -100,
@@ -724,12 +751,12 @@ namespace Arcanism.Patches
             // but has better stats in general, and is also a RANGED weapon, making its chance to proc at all much more valuable
             // DPS goal: 320 (so mem of snow is 50% stronger, but requires close range and slow/frustrating)
             // so Brax Fury 1300 dmg 20%/s = 260 dps, make weapon 60 dps
-            new EquipmentGenerator { Id = ItemId.VOLCANIC_SCEPTRE, HP = 180, Mana = 30, AC = 15, Int = 5, Wis = 6, Cha = 20, Res = 2, }.TuneWand(60, 1, 25, SpellDB_Start.BRAXS_FURY_SPELL_ID, 20).Generate(__instance);
+            new ItemGenerator { Id = ItemId.VOLCANIC_SCEPTRE, HP = 180, Mana = 30, AC = 15, Int = 5, Wis = 6, Cha = 20, Res = 2, }.TuneWand(60, 1, 25, SpellDB_Start.BRAXS_FURY_SPELL_ID, 20).Generate(__instance);
 
             // changing res crystal to be a wand type instead of melee, got enough of those, and doesn't... *look* like a melee weapon.
             // Stats once paired in set are "all 'round good" but not stand-out amazing -- what makes it special is its atk speed halves, dmg doubles, so it ends up *powerful* as a wand in set
             // make it feel like the plasma gun from Doom! 460 DPS in set seems like a good point to get to
-            new EquipmentGenerator
+            new ItemGenerator
             {
                 Id = ItemId.RESONATING_CRYSTAL,
                 HP = 120,
@@ -750,18 +777,18 @@ namespace Arcanism.Patches
             // And Siva Wand somewhere between that and Volc Sceptre -- better stats and raw dps, less proc chance/dmg (290 dps)
             // With a spell proc and similar level  this would be too similar to Volc Sceptre, so make it stronger raw dps, slower, better stats, but fewer procs
             // DPS goal: 290 (focus pain = 1500 dmg @ 10% = 150 so 140 base dps)
-            new EquipmentGenerator { Id = ItemId.SIVAKAYAN_SCEPTRE, Level = 26, HP = 100, Mana = 100, AC = 8, End = 8, Int = 28, Wis = 12, Cha = 7, Res = 3 }.TuneWand(500, 2, 25).Generate(__instance);
-            new EquipmentGenerator { Id = ItemId.SIVAKAYAN_WAND, HP = 20, Mana = 80, AC = 0, Int = 23, Wis = 2, Cha = 14, Res = 2 }.TuneWand(140, 1, 18, null, 10).Generate(__instance);
+            new ItemGenerator { Id = ItemId.SIVAKAYAN_SCEPTRE, Level = 26, HP = 100, Mana = 100, AC = 8, End = 8, Int = 28, Wis = 12, Cha = 7, Res = 3 }.TuneWand(500, 2, 25).Generate(__instance);
+            new ItemGenerator { Id = ItemId.SIVAKAYAN_WAND, HP = 20, Mana = 80, AC = 0, Int = 23, Wis = 2, Cha = 14, Res = 2 }.TuneWand(140, 1, 18, null, 10).Generate(__instance);
             // Runed Shield = lots of extra defense, completely sacrificing int
-            new EquipmentGenerator { Id = ItemId.RUNED_SHIELD, HP = 300, Mana = 60, AC = 75, End = 15, Int = 0, Wis = 12, Cha = 16, Res = 2 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.RUNED_SHIELD, HP = 300, Mana = 60, AC = 75, End = 15, Int = 0, Wis = 12, Cha = 16, Res = 2 }.Generate(__instance);
 
             // Vanilla Brax's Candle just seems like... a worse Volcanic Sceptre that you unlock later. I'm removing its chance to prox Brax's Rage on hit, and instead giving it an activatable cast of something.
             // Also going to buff it and make it part of a set with the Brax Testament... after all, these two surely belong together, and Brax-themed gear is also extremely wizardly!
 
             //  Spectral Sceptre is an odd one -- low level and unremarkable at that, but dropped from a high end enemy. To play into its spectral nature I'm making it to high damage but with nil stats except res
-            new EquipmentGenerator { Id = ItemId.SPECTRAL_SCEPTRE, Level = 29, HP = 0, Mana = 0, AC = 0, End = 0, Dex = 0, Int = 0, Wis = 0, Cha = 0, Res = 4 }.TuneWand(400, 1, 25).Generate(__instance);
+            new ItemGenerator { Id = ItemId.SPECTRAL_SCEPTRE, Level = 29, HP = 0, Mana = 0, AC = 0, End = 0, Dex = 0, Int = 0, Wis = 0, Cha = 0, Res = 4 }.TuneWand(400, 1, 25).Generate(__instance);
 
-            var braxsCandle = new EquipmentGenerator
+            var braxsCandle = new ItemGenerator
             {
                 Id = ItemId.BRAXS_CANDLE,
                 HP = 25,
@@ -777,7 +804,7 @@ namespace Arcanism.Patches
             braxsCandle.WandEffect = null;
             braxsCandle.WandProcChance = 0;
 
-            new EquipmentGenerator
+            new ItemGenerator
             {
                 Id = ItemId.BRAXONIAN_TESTAMENT,
                 HP = 25,
@@ -793,7 +820,7 @@ namespace Arcanism.Patches
             // However, SivaBrax teachings are only obtained via a quest, therefore can't be dropped as quality items etc. -- making the glowing blue stone a solid endgame option if you manage a good drop!
             // How's that for a reason to go back to Fernella's and kill those spectres that whooped our arses earlier? ;)
             // DPS Goal: similar to resonating crystal, slightly stronger dps, but mainly an upgrade because it's got good stats
-            new EquipmentGenerator
+            new ItemGenerator
             {
                 Id = ItemId.GLOWING_BLUE_STONE,
                 HP = 300,
@@ -808,7 +835,7 @@ namespace Arcanism.Patches
                 Level = 36,
                 Lore = "You've never seen the color blue look so vivid... But is there something that could make it brighter still?",
             }.TuneWand(130, 1, 15).Generate(__instance);
-            new EquipmentGenerator
+            new ItemGenerator
             {
                 Id = ItemId.SIVA_BRAXONIAN_TEACHINGS,
                 HP = 155,
@@ -828,7 +855,7 @@ namespace Arcanism.Patches
             // - As materwork it's as good as a 1h+offhand in stats, then that's half the time required compared with getting rare on *both* those items.
             // It's also only 1 item to blue+purple!
             // So, this will be balanced to be an "early endgame item" that will be outclassed by the other items if you manage to get good drops on both the 1h+offhand.
-            new EquipmentGenerator
+            new ItemGenerator
             {
                 Id = ItemId.PETRIFIED_WOOD_CANE,
                 HP = 280,
@@ -851,13 +878,13 @@ namespace Arcanism.Patches
             // and swapping out Magic Missile on hit for... INFERNIS! So a big advantage of using Garg is you can keep Infernis up on enemies without wasting mana/time to cast.
             // but if you don't mind doing that yourself anyway, maybe this isn't the weapon for you any more...
             // 380 DPS -- solid for endgame, but not extraordinary. 
-            new EquipmentGenerator { Id = ItemId.GARG_WAND, HP = 50, Mana = 200, Int = 35, Wis = 18, Cha = 0, Res = 5 }.TuneWand(760, 2, 25, SpellDB_Start.INFERNIS_SPELL_ID, 30).Generate(__instance);
+            new ItemGenerator { Id = ItemId.GARG_WAND, HP = 50, Mana = 200, Int = 35, Wis = 18, Cha = 0, Res = 5 }.TuneWand(760, 2, 25, SpellDB_Start.INFERNIS_SPELL_ID, 30).Generate(__instance);
 
             // Endgame viable defensive offhander with int, wis and res
-            new EquipmentGenerator { Id = ItemId.ULORS_ENCYCLOPEDIA, HP = 500, Mana = 200, AC = 40, End = 20, Int = 30, Wis = 22, Cha = 0, Res = 5 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.ULORS_ENCYCLOPEDIA, HP = 500, Mana = 200, AC = 40, End = 20, Int = 30, Wis = 22, Cha = 0, Res = 5 }.Generate(__instance);
 
             // A semi defensive off-hander with a wis focus (less useful) and less stats overall, but with 1 higher res. So, a difficult compromise.
-            new EquipmentGenerator { Id = ItemId.ASCENDED_REMAINS, HP = 250, Mana = 400, AC = 20, End = 10, Int = 4, Wis = 30, Cha = 15, Res = 6 }.Generate(__instance);
+            new ItemGenerator { Id = ItemId.ASCENDED_REMAINS, HP = 250, Mana = 400, AC = 20, End = 10, Int = 4, Wis = 30, Cha = 15, Res = 6 }.Generate(__instance);
 
             // At last we come to you! When did I start writing comments for every item? *I DON'T KNOW!* But it's a thing now! I'm probably losing my mind!
             // I've tweaked way, way too many items! I don't know what I'm doing any more! LET'S GOOO!
@@ -871,7 +898,7 @@ namespace Arcanism.Patches
             // [21/11/2025: Brought raw dps from 190 to 250, bringing total avg dps to 538 on average. That's because battles don't tend to go as long at this point in the game,
             // so a "powerful infrequent proc" which happens to balance damage on avg is less useful. I would even have increased it further, but for the same exact reason, the fact
              // it attacks once per second (2x garg speed) makes up for any further damage loss, as it's handier for clearing weaker enemies]
-            new EquipmentGenerator { Id = ItemId.SINGULARITY_VESSEL_OF_CREATION, HP = 500, Mana = 355, AC = 40, Int = 40, Wis = 14, Cha = 34, Res = 6 }.TuneWand(250, 1, 25, null, 10).Generate(__instance);
+            new ItemGenerator { Id = ItemId.SINGULARITY_VESSEL_OF_CREATION, HP = 500, Mana = 355, AC = 40, Int = 40, Wis = 14, Cha = 34, Res = 6 }.TuneWand(250, 1, 25, null, 10).Generate(__instance);
         }
 
         public static void RegisterSets(ItemDatabase itemDb)
@@ -981,51 +1008,7 @@ namespace Arcanism.Patches
 
             // Not sure why this needs to be done, as I'm not actually changing the map pieces' references or IDs, but perhaps they're assigned based on a name lookup somewhere..?
             // In any case, after this patch the list is empty so I'm manually popping them in
-            Main.Log.LogInfo("Existing GM.Maps  before I replace the list: ");
-            foreach(var m in GameData.GM.Maps)
-            {
-                Main.Log.LogInfo(m.Id + " - " + m.ItemName);
-            }
             GameData.GM.Maps = new List<Item>() { firstPart, secondPart, thirdPart, fourthPart };
-        }
-
-
-
-        static Item CreateSkillBook(Item baseSkillBook, ItemId id, string skillId, int value)
-        {
-            var book = GameObject.Instantiate(baseSkillBook);
-            book.Id = id.Id();
-            book.TeachSkill = GameData.SkillDatabase.GetSkillByID(skillId);
-            book.name = book.ItemName = $"Skill Book: {book.TeachSkill.SkillName}";
-            book.ItemLevel = book.TeachSkill.ArcanistRequiredLevel;
-            book.ItemValue = value;
-            return book;
-        }
-
-        private static Item SoldBy(NpcName npcName, Item item)
-        {
-            if (!itemsSoldByVendor.TryGetValue(npcName, out HashSet<Item> set))
-            {
-                set = new HashSet<Item>();
-                itemsSoldByVendor.Add(npcName, set);
-            }
-
-            set.Add(item);
-
-            return item;
-        }
-
-        private static Item DroppedBy(NpcName npcName, DropChance dropChance, Item item)
-        {
-            if (!dropsByNpc.TryGetValue(npcName, out HashSet<(DropChance, Item)> set))
-            {
-                set = new HashSet<(DropChance, Item)>();
-                dropsByNpc.Add(npcName, set);
-            }
-
-            set.Add((dropChance, item));
-
-            return item;
         }
 
         public static void RefreshSprites(ItemDatabase itemDb = null)
@@ -1040,8 +1023,6 @@ namespace Arcanism.Patches
 
         static void AddLuckScrolls(ItemDatabase __instance, List<Item> itemsToAdd)
         {
-            var bread = __instance.GetItemByID(ItemId.BREAD);
-
             foreach (var scrollData in new List<(ItemId scrollId, string spellId, int value)>() {
                     (ItemId.LUCK_SCROLL_1, SpellDB_Start.LUCK_OF_SOLUNA_1_SPELL_ID, 5500),
                     (ItemId.LUCK_SCROLL_2, SpellDB_Start.LUCK_OF_SOLUNA_2_SPELL_ID, 20000),
@@ -1050,17 +1031,9 @@ namespace Arcanism.Patches
                     (ItemId.LUCK_SCROLL_5, SpellDB_Start.LUCK_OF_SOLUNA_5_SPELL_ID, 180000),
                 })
             {
-                var scroll = GameObject.Instantiate(bread);
-                var spell = GameData.SpellDatabase.GetSpellByID(scrollData.spellId);
-                scroll.Id = scrollData.scrollId.Id();
-                scroll.name = scroll.ItemName = $"Scroll of {spell.SpellName}";
-                scroll.Lore = spell.SpellDesc;
-                scroll.ItemEffectOnClick = spell;
-                scroll.ItemValue = scrollData.value;
-
-                SoldBy(NpcName.ASAGA_UNDERLOFT, scroll);
-                itemsToAdd.Add(scroll);
+                itemsToAdd.Add(new ItemGenerator().NewEffectScroll(scrollData.scrollId, scrollData.spellId, scrollData.value).SoldBy(NpcName.ASAGA_UNDERLOFT).Generate(__instance));
             }
+            
         }
     }
 }
