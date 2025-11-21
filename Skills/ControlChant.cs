@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace Arcanism.Skills
 {
-    class ControlChant : ExtendedSkill, ISpellDamageModifier, ISpellCooldownModifier
+    class ControlChant : SpellAugmentationSkill, ISpellDamageModifier, ISpellCooldownModifier
     {
         // These values represent *additional* factors, i.e. a value of 0.5 means +50% compared to normal
         public static readonly float EXTRA_CAST_TIME_FACTOR = 0.6f;

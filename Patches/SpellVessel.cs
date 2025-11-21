@@ -176,21 +176,28 @@ namespace Arcanism.Patches
     [HarmonyPatch(typeof(SpellVessel), "EndSpell")]
     class SpellVessel_EndSpell
     {
-        static bool Prefix(SpellVessel __instance, CastSpell ___SpellSource, ref Stats ___targ, ref float ___CDMult, bool ___resonating)
+        static bool Prefix(SpellVessel __instance, CastSpell ___SpellSource, ref Stats ___targ, ref float ___CDMult, ref bool ___resonating)
         {
             if (__instance.isProc) // Don't want procs interfering with other casting flow e.g. closing cast bar
                 return true;
 
             // a caster can have multiple vessels and the "currentvessel" can change when spells resonate, so what matters is the vessel *relating to* the skill.
-            var isUsingCastingSkill = __instance == ___SpellSource.MyChar.GetComponent<ExtendedSkill>()?.Vessel; 
+            var isUsingCastingSkill = __instance == ___SpellSource.MyChar.GetComponent<SpellAugmentationSkill>()?.Vessel; 
             
             if (isUsingCastingSkill)
             {
-                var nextTarget = ___SpellSource.MyChar.GetComponent<IRetargetingSkill>()?.GetNextTarget();
+                var retargeting = ___SpellSource.MyChar.GetComponent<ISpellRetargetingSkill>();
+                var nextTarget = retargeting?.GetNextTarget();
                 if (nextTarget != null) /* If an IRetargetingSkill was used and there are still more targets, cancel EndSpell, update target, resolve again 'til no targets left */
                 {
                     ___targ = nextTarget.MyStats;
                     __instance.UseMana = false;
+
+                    // res cooldown gets set on each ResolveSpell (if it resonates), meaning subsequent hits can't.
+                    // But with the right ascension, for example, Twin Spell can reset that cooldown thus allowing the next hit to (have a chance to) resonate
+                    if (___resonating && retargeting.AllowResonatingOnCurrentTarget()) 
+                        ___SpellSource.MyChar.MyStats.resonanceCD = 0f;
+
                     __instance.ResolveEarly();
                     return false;
                 }
@@ -226,7 +233,7 @@ namespace Arcanism.Patches
             // Quick hack for players only: disable flinch while casting to prevent that annoying bug where you get hurt and continue casting but standing still
             ___SpellSource.MyChar.NoFlinch = true;
 
-            IEnumerable<Character> allTargs = ___SpellSource.MyChar.GetComponent<IRetargetingSkill>()?.GetAllTargets();
+            IEnumerable<Character> allTargs = ___SpellSource.MyChar.GetComponent<ISpellRetargetingSkill>()?.GetAllTargets();
             if (allTargs == null)
                 allTargs = new List<Character>() { ___targ.Myself };
 

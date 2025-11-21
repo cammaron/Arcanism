@@ -510,7 +510,7 @@
     <Compile Include="Skills\ControlChant.cs" />
     <Compile Include="CooldownManager.cs" />
     <Compile Include="SkillExtension\ExtensionManager.cs" />
-    <Compile Include="SkillExtension\IRetargetingSkill.cs" />
+    <Compile Include="SkillExtension\ISpellRetargetingSkill.cs" />
     <Compile Include="Patches\Hotkeys.cs" />
     <Compile Include="Patches\Inventory.cs" />
     <Compile Include="Patches\ItemDatabase.cs" />
@@ -524,7 +524,7 @@
     <Compile Include="Patches\Stats.cs" />
     <Compile Include="SkillExtension\ISpellDamageModifier.cs" />
     <Compile Include="SkillExtension\ISpellCooldownModifier.cs" />
-    <Compile Include="SkillExtension\ExtendedSkill.cs" />
+    <Compile Include="SkillExtension\SpellAugmentationSkill.cs" />
     <Compile Include="Skills\TwinSpell.cs" />
     <Compile Include="Patches\UseSkill.cs" />
     <Compile Include="Patches\NPC.cs" />

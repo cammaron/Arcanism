@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Arcanism
 {
-    public abstract class ExtendedSkill : MonoBehaviour
+    public abstract class SpellAugmentationSkill : MonoBehaviour
     {
         protected delegate bool Condition(Character caster, SpellVessel vessel, Character target);
 

@@ -195,10 +195,10 @@ namespace Arcanism.Patches
 			switch (GetBlessLevel(quantity))
 			{
 				case Blessing.BLESSED:
-					mod = 1 + 0.5f * modFactor;
+					mod = 1f + 0.5f * modFactor;
 					break;
 				case Blessing.GODLY:
-					mod = 1 + 1 * modFactor;
+					mod = 1f + 1f * modFactor;
 					break;
 				default:
 					mod = 1f;
@@ -208,19 +208,20 @@ namespace Arcanism.Patches
 			switch (GetQualityLevel(quantity))
 			{
 				case Quality.JUNK:
-					mod *= 1 - (.3f * modFactor); 
+					mod *= 1f - (.4f * modFactor); // was .3f before rbalance 21/11/2025
+					break;
+				case Quality.NORMAL:
+					mod *= 1f - (.15f * modFactor);  // obv 1f before
 					break;
 				case Quality.SUPERIOR:
-					mod *= 1 + (0.2f * modFactor);
+					mod *= 1f + (0.05f * modFactor); // was .2f
 					break;
 				case Quality.MASTERWORK:
-					mod *= 1 + (0.4f * modFactor);
+					mod *= 1f + (0.25f * modFactor); // was .4f
 					break;
 				case Quality.EXQUISITE:
-					mod *= 1 + (.8f * modFactor);
+					mod *= 1f + (.5f * modFactor); // was .8f
 					break;
-
-				case Quality.NORMAL:
 				default:
 					break;
 			}

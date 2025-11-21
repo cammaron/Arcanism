@@ -48,8 +48,6 @@ namespace Arcanism.Patches
 			Main.Log.LogInfo("*********");
 			Main.Log.LogInfo("Continuing with Overriding SkillDB with Arcanism balance tweaks.");
 
-			
-
 			AddSkills(__instance);
 			AddAscensions(__instance);
 
@@ -136,7 +134,7 @@ namespace Arcanism.Patches
 			var baseAsc = __instance.GetAscensionByID(COOLDOWN_REDUCTION_ASCENSION_ID);
 
 			List<Ascension> toAdd = new List<Ascension>();
-			toAdd.Add(CreateAscension(baseAsc, MIND_SPLIT_ASCENSION_ID, "Mind Split", $"Currently unimplemented.", 3));
+			toAdd.Add(CreateAscension(baseAsc, MIND_SPLIT_ASCENSION_ID, "Mind Split", $"<size=14>Twinning spells, even in ideal circumstances, is costly and difficult; fundamental limitations ordinarily prevent twinned spells from resonating. For each level, you surpass one of those barriers, allowing another twin target the chance to resonate in cascade, so long as the one prior already did so.</size>.", 3));
 			toAdd.Add(CreateAscension(baseAsc, REFRACTION_ASCENSION_ID, "Refraction", $"<size=14>Infused with your own magic, your supernatural vigour reduces the recovery period before you can use Control Chant, Twin Spell and Perfect Release by {REFRACTION_COOLDOWN_FACTOR * 100}% per level.</size>", 5));
 
 			foreach (var asc in toAdd)

@@ -6,9 +6,11 @@ using System.Threading.Tasks;
 
 namespace Arcanism.SkillExtension
 {
-    interface IRetargetingSkill
+    interface ISpellRetargetingSkill
     {
         IEnumerable<Character> GetAllTargets();
         Character GetNextTarget();
+
+        bool AllowResonatingOnCurrentTarget();
     }
 }

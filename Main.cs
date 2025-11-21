@@ -110,7 +110,7 @@ namespace Arcanism
         {
             Logger?.LogInfo("Destroying Arcanism.");
             DestroyAllOfType<CooldownManager>();
-            DestroyAllOfType<ExtendedSkill>();
+            DestroyAllOfType<SpellAugmentationSkill>();
             DestroyAllOfType<CharacterUI.CharacterHoverUI>();
             DestroyAllOfType<ItemIconVisuals>();
             DestroyAllOfType<LootHelper>();

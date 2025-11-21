@@ -8,7 +8,7 @@ using UnityEngine.Rendering.PostProcessing;
 
 namespace Arcanism.Skills
 {
-    class TwinSpell : ExtendedSkill, IRetargetingSkill, ISpellDamageModifier
+    class TwinSpell : SpellAugmentationSkill, ISpellRetargetingSkill, ISpellDamageModifier
     {
         public const float FIRST_TWIN_MANA_COST = .5f;  // 1st twin target costs 50% extra mana on top of base spell
         public const float ADDITIONAL_TWIN_MANA_COST = .1f; // additional extra targets cost 10% each, so way more cost effective the more targets.
@@ -26,6 +26,9 @@ namespace Arcanism.Skills
         bool hasAttacked = false;
         bool appliedParasiticTwin = false;
         bool isFinished = false;
+
+        int extraResonanceAvailable;
+        bool readyToResonate;
 
         HashSet<Character> npcsDiedWhileCasting = new HashSet<Character>();
 
@@ -73,6 +76,7 @@ namespace Arcanism.Skills
                     if (caster.MySkills.KnowsSkill(SkillDB_Start.TWIN_SPELL_SKILL_ID)) component.maxTargets += 1;
                     if (caster.MySkills.KnowsSkill(SkillDB_Start.TWIN_SPELL_MASTERY_SKILL_ID)) component.maxTargets += 1;
                     if (caster.MySkills.KnowsSkill(SkillDB_Start.TWIN_SPELL_MASTERY_2_SKILL_ID)) component.maxTargets += 1;
+                    component.extraResonanceAvailable = caster.MySkills.GetAscensionRank(SkillDB_Start.MIND_SPLIT_ASCENSION_ID);
 
                     var postProcessing = GameData.CamGetPPFX?.GetLivePPFX();
                     if (postProcessing != null)
@@ -272,7 +276,16 @@ namespace Arcanism.Skills
                 }
 
                 GameData.PlayerAud.PlayOneShot(Main.sfxByName["twin-release"]);
-                
+
+                // On the FIRST hit (which is the original spell, not a twin target), we're ready to resonate as long as it's off cooldown. 
+                // This doesn't get checked by SpellVessel for this hit anyway, but it's necessary so we can compare whether resCD has *changed* before the next target,
+                // implying the first hit resonated (which is a precondition to further resonating)
+                readyToResonate = caster.MyStats.resonanceCD <= 0f;
+            } else
+            {
+                readyToResonate = extraResonanceAvailable >= currentTargetIndex && readyToResonate && caster.MyStats.resonanceCD > 0f;
+                if (readyToResonate)
+                    UpdateSocialLog.LogAdd($"MIND SPLIT! You try to cascade your spell resonance!", "#" + ColorUtility.ToHtmlStringRGB(Color.magenta));
             }
 
             hasAttacked = true;
@@ -298,6 +311,11 @@ namespace Arcanism.Skills
             }
 
             return allTargets[++currentTargetIndex];
+        }
+
+        public bool AllowResonatingOnCurrentTarget()
+        {
+            return readyToResonate;
         }
 
         private void ApplyParasiticTwin()
